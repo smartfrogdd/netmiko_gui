@@ -696,11 +696,11 @@ ip,username,password,device_type,secret
             if 用户视图命令:
                 输出结果 += f"用户视图命令：{用户视图命令}\n"
                      
-                输出结果 += 连接.send_command(用户视图命令) + "\n"
+                # 输出结果 += 连接.send_command(用户视图命令) + "\n"
 
  
-                # 输出结果 += 连接.send_command(用户视图命令, expect_string='Y/N'and"<"and">") + "\n"
-           
+                输出结果 += 连接.send_command_timing(用户视图命令) + "\n"
+
 
 
 
