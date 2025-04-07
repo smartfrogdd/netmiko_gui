@@ -1,983 +1,681 @@
-import concurrent.futures
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+AutoNetPy 网络自动化工具（优化界面效果版）
+"""
+
 import os
 import csv
+import time
+import queue
+import threading
+import subprocess
+import concurrent.futures
+import logging
+from datetime import datetime
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, ttk
+from tkinter import filedialog, scrolledtext, ttk, messagebox
+from PIL import Image, ImageTk
 from ttkthemes import ThemedStyle
 from netmiko import SSHDetect, ConnectHandler
-import concurrent.futures
-import threading
-from datetime import datetime
-import sys
-import tkinter.scrolledtext as scrolledtext
-import queue   
-from paramiko.ssh_exception import SSHException
-from ttkthemes import ThemedStyle
-import logging
-from tkinter import messagebox
-import time
-from PIL import Image, ImageTk
-import subprocess
 from netmiko.ssh_dispatcher import CLASS_MAPPER
+from paramiko.ssh_exception import SSHException
 
-encoding="utf-8"
-class Netmiko工具:
+# --------------------- 调试日志处理 ---------------------
+class DebugLogHandler(logging.Handler):
+    def __init__(self, text_widget):
+        super().__init__()
+        self.text_widget = text_widget
 
-    def __init__(self, 主窗口):
-       
-        self.主窗口 = 主窗口
-        self.主窗口.title("AutoNetPy")
-        self.主窗口.resizable(True, True)
-        # 使用 Pillow 加载 PNG 图像
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(script_dir, "icon.png")
-        icon_image = Image.open(icon_path)
-        icon_image = icon_image.resize((64, 64))  # 调整图像大小
-        icon_photo = ImageTk.PhotoImage(icon_image)
-        主窗口.geometry("1120x800")
-        主窗口.minsize(1120, 800)
-        # 设置窗口图标
-        self.主窗口.iconphoto(True, icon_photo)
-        # 使用 ThemedStyle 设置主题
-        self.style = ThemedStyle(self.主窗口)
-        self.style.set_theme("plastik")
-    
-        # 添加日志路径
-        # 设置日志目录在脚本所在目录下
-        self.log_folder = os.path.join(script_dir, "日志")
-        self.检查日志()
-        # 创建和布局GUI组件
-        self.notebook = ttk.Notebook(self.主窗口)
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.text_widget.insert(tk.END, log_entry + "\n")
+        self.text_widget.yview(tk.END)
 
-        # 创建主页面
-        self.frame_cmd = ttk.Frame(self.notebook)
+# --------------------- 日志管理模块 ---------------------
+class LogManager:
+    def __init__(self, base_dir):
+        self.log_folder = os.path.join(base_dir, "日志")
+        self.check_log_directory()
+
+    def check_log_directory(self):
+        if not os.path.exists(self.log_folder):
+            os.makedirs(self.log_folder)
+            print(f"创建日志文件夹：{self.log_folder}")
+
+    def record_error(self, device_info, error_info):
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        error_log_path = os.path.join(self.log_folder, "error.log")
+        with open(error_log_path, "a", encoding="utf-8") as f:
+            f.write(f"设备：{device_info['ip']}，报错时间：{current_time}\n")
+            f.write(f"详细错误信息：\n{error_info}\n")
+
+# --------------------- 主程序 GUI 模块 ---------------------
+class NetmikoToolGUI:
+    def __init__(self, master):
+        
+        self.master = master
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.log_manager = LogManager(self.script_dir)
+        self.device_list = []                # CSV导入的设备列表
+        self.result_queue = queue.Queue()    # 存放任务返回结果
+        self.global_timeout = 10.0           # 全局连接超时时间
+        self.encoding = "utf-8"              # 默认编码
+        self.max_tab_count = 5               # 最多显示的设备日志标签数
+        self.device_tabs = {}                # 设备对应的日志标签
+        self.enable_debug_flag = False       # Debug日志开关
+
+        self.setup_gui()
+
+    # --------------------- 窗口与主题设置 ---------------------
+    def setup_gui(self):
+        self.master.title("AutoNetPy")
+        self.master.geometry("1120x800")
+        self.master.minsize(1120, 800)
+        self.set_window_icon()
+
+        # 使用 "arc" 主题（ttkthemes内置的现代主题）
+        self.style = ThemedStyle(self.master)
+        self.style.set_theme("arc")
+        # 设置统一字体
+        default_font = ('Consolas',10)
+        self.master.option_add("*Font", default_font)
+
+        # 主 Notebook
+        self.notebook = ttk.Notebook(self.master)
+        self.notebook.pack(padx=10, pady=10, fill="both", expand=True)
+
+        self.create_command_tab()
+        self.create_config_tab()
+        self.create_connection_test_tab()
+        self.create_debug_tab()
+        self.create_about_tab()
+
+    def set_window_icon(self):
+        icon_path = os.path.join(self.script_dir, "icon.png")
+        try:
+            icon_image = Image.open(icon_path)
+            icon_image = icon_image.resize((64, 64))
+            icon_photo = ImageTk.PhotoImage(icon_image)
+            self.master.iconphoto(True, icon_photo)
+        except Exception as e:
+            print(f"无法加载图标: {e}")
+
+    # --------------------- 命令执行页面 ---------------------
+    def create_command_tab(self):
+        self.frame_cmd = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.frame_cmd, text="输入命令")
 
-        # 设置网格布局
-        self.frame_cmd.grid_columnconfigure(0, weight=1)
-        self.frame_cmd.grid_columnconfigure(1, weight=1)
-        self.frame_cmd.grid_columnconfigure(2, weight=1)
+        # 用户视图命令
+        ttk.Label(self.frame_cmd, text="填写用户视图命令：").grid(
+            row=0, column=0, sticky="nw", padx=5, pady=5
+        )
+        self.user_cmd_text = scrolledtext.ScrolledText(
+            self.frame_cmd, height=4, width=50, wrap=tk.WORD
+        )
+        self.user_cmd_text.grid(
+            row=1, column=0, columnspan=3, sticky="nsew", padx=5, pady=5
+        )
+        self.default_user_cmd = "可输入单行或多行命令，如：\nshow run\nshow interface"
+        self.user_cmd_text.insert(tk.END, self.default_user_cmd)
+        self.user_cmd_text.bind("<FocusIn>", self.on_user_cmd_focus_in)
+        self.user_cmd_text.bind("<FocusOut>", self.on_user_cmd_focus_out)
 
-        # 禁用 frame_cmd 的自动调整大小
-        self.frame_cmd.grid_propagate(False)
+        # 配置视图命令
+        ttk.Label(self.frame_cmd, text="填写配置/系统视图命令：").grid(
+            row=2, column=0, sticky="w", padx=5, pady=5
+        )
+        self.config_cmd_text = scrolledtext.ScrolledText(
+            self.frame_cmd, height=4, width=50, wrap=tk.WORD
+        )
+        self.config_cmd_text.grid(
+            row=3, column=0, columnspan=3, sticky="nsew", padx=5, pady=5
+        )
+        self.default_config_cmd = "可输入单行或多行命令，如：\ninterface loopback10\ndescription netmiko"
+        self.config_cmd_text.insert(tk.END, self.default_config_cmd)
+        self.config_cmd_text.bind("<FocusIn>", self.on_config_cmd_focus_in)
+        self.config_cmd_text.bind("<FocusOut>", self.on_config_cmd_focus_out)
 
-        # 设置第 0 行的固定高度
-        self.frame_cmd.grid_rowconfigure(0, weight=0, minsize=10)  # 30 是固定的高度，可以根据需要调整
+        # 操作按钮（统一设置宽度和内边距）
+        btn_opts = {"width": 20, "padding": 5}
+        ttk.Button(
+            self.frame_cmd, text="运行用户视图命令", command=self.run_user_command, **btn_opts
+        ).grid(row=4, column=0, padx=5, pady=5, sticky="ew")
+        ttk.Button(
+            self.frame_cmd, text="运行配置视图命令", command=self.run_config_command, **btn_opts
+        ).grid(row=4, column=1, padx=5, pady=5, sticky="ew")
+        ttk.Button(
+            self.frame_cmd, text="清空执行结果", command=self.clear_execution_results, **btn_opts
+        ).grid(row=4, column=2, padx=5, pady=5, sticky="ew")
+        ttk.Button(
+            self.frame_cmd, text="打开日志目录", command=self.open_log_directory, **btn_opts
+        ).grid(row=5, column=1, padx=5, pady=5, sticky="ew")
+        ttk.Button(
+            self.frame_cmd, text="开启Debug日志", command=self.toggle_debug_logging, **btn_opts
+        ).grid(row=5, column=0, padx=5, pady=5, sticky="ew")
+        ttk.Button(
+            self.frame_cmd, text="清空Debug日志", command=self.clear_debug_log_text, **btn_opts
+        ).grid(row=5, column=2, padx=5, pady=5, sticky="ew")
 
-        # 创建 Label 控件，确保顶部对齐
-        tk.Label(self.frame_cmd, text="填写用户视图命令：").grid(row=0, column=0, sticky="nw", padx=5, pady=5)
-        # Text 输入框，紧贴 Label，确保只在垂直方向扩展
-        self.用户视图命令文本 = scrolledtext.ScrolledText(self.frame_cmd, height=4, width=50, wrap=tk.WORD)
-        self.用户视图命令文本.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=0, pady=0)
-
-        # row=1 向下扩展，确保文本框随着窗口增加高度而拉伸
-        self.frame_cmd.grid_rowconfigure(1, weight=1)
-
-        # 列宽设置，使文本框可以左右扩展
-        self.frame_cmd.grid_columnconfigure(0, weight=1)
-        self.frame_cmd.grid_columnconfigure(1, weight=1)
-        self.frame_cmd.grid_columnconfigure(2, weight=1)
-
-
-
-        # 设置默认文本
-        default_text = "可输入单行或多行命令，如：\nshow run\nshow interface"
-        self.用户视图命令文本.insert(tk.END, default_text)
-
-        # 设置焦点事件
-        def on_entry_click(event):
-            if self.用户视图命令文本.get("1.0", "end-1c") == default_text:
-                self.用户视图命令文本.delete("1.0", tk.END)
-                self.用户视图命令文本.config(fg="black")  # 修改文本颜色为黑色
-
-        # 绑定焦点事件
-        self.用户视图命令文本.bind("<FocusIn>", on_entry_click)
-
-        # 设置焦点离开事件
-        def on_focus_out(event):
-            if not self.用户视图命令文本.get("1.0", "end-1c"):
-                self.用户视图命令文本.insert(tk.END, default_text)
-                self.用户视图命令文本.config(fg="grey")  # 修改文本颜色为灰色
-
-        # 绑定焦点离开事件
-        self.用户视图命令文本.bind("<FocusOut>", on_focus_out)
-        tk.Label(self.frame_cmd, text="填写配置/系统视图命令：").grid(row=2, column=0, pady=5, sticky=tk.W)
-        # 创建配置视图命令文本框
-        # 设置文本框
-        self.配置视图命令文本 = scrolledtext.ScrolledText(self.frame_cmd, height=4, width=50, wrap=tk.WORD)
-        self.配置视图命令文本.grid(row=3, column=0, columnspan=3, pady=5, sticky="nsew")
-
-        # 允许列扩展
-        self.frame_cmd.grid_columnconfigure(0, weight=1)
-        self.frame_cmd.grid_columnconfigure(1, weight=1)
-        self.frame_cmd.grid_columnconfigure(2, weight=1)
-
-        # 允许第3行扩展
-        self.frame_cmd.grid_rowconfigure(3, weight=1)
-
-
-        # 设置默认文本和焦点事件
-        default_text_config_mode = "可输入单行或多行命令，如：\ninterface loopback10\ndescription netmiko"
-        self.配置视图命令文本.insert(tk.END, default_text_config_mode)
-
-        def on_entry_click_config_mode(event):
-            if self.配置视图命令文本.get("1.0", "end-1c") == default_text_config_mode:
-                self.配置视图命令文本.delete("1.0", tk.END)
-                self.配置视图命令文本.config(fg="black")  # 修改文本颜色为黑色
-
-        self.配置视图命令文本.bind("<FocusIn>", on_entry_click_config_mode)
-
-        def on_focus_out_config_mode(event):
-            if not self.配置视图命令文本.get("1.0", "end-1c"):
-                self.配置视图命令文本.insert(tk.END, default_text_config_mode)
-                self.配置视图命令文本.config(fg="grey")  # 修改文本颜色为灰色
-
-        self.配置视图命令文本.bind("<FocusOut>", on_focus_out_config_mode)
-        tk.Button(self.frame_cmd, text="运行用户视图命令", command=self.运行用户视图命令).grid(row=4, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="运行配置视图命令", command=self.运行配置视图命令).grid(row=4, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="清空执行结果", command=self.清空执行结果).grid(row=4, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="打开日志目录", command=self.打开日志目录).grid(row=5, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
-
-# 创建 notebook 用于显示运行结果
+        # Notebook用于显示执行结果和Debug日志
         self.notebook_results = ttk.Notebook(self.frame_cmd)
-        self.notebook_results.grid(row=0, rowspan=6, column=5, columnspan=3, pady=5, sticky=tk.N+tk.S+tk.W+tk.E)
-        
+        self.notebook_results.grid(
+            row=0, rowspan=6, column=5, columnspan=3, padx=5, pady=5, sticky="nsew"
+        )
+        self.device_tabs = {}
 
-
-
-        self.设备标签页字典 = {}  # 存储每台设备对应的标签页
-
-        # 创建DEBUG开关按钮
-        self.debug_button = tk.Button(self.frame_cmd, text="开启Debug日志", command=self.toggle_debug_logging)
-        self.debug_button.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
-
-        # 创建子标签页用于展示debug日志输出的内容
-        self.debug_log_tab = ttk.Frame(self.notebook_results)
-
-        
-        self.notebook_results.add(self.debug_log_tab, text="Debug日志")
-        self.debug_log_text = scrolledtext.ScrolledText(self.debug_log_tab, wrap=tk.WORD, bg="black", fg="lightgreen")
-        default_debug_text="开启debug功能后会在此处显示详细日志。"
-        self.debug_log_text.insert(tk.END, default_debug_text)
+        self.debug_tab = ttk.Frame(self.notebook_results)
+        self.notebook_results.add(self.debug_tab, text="Debug日志")
+        self.debug_log_text = scrolledtext.ScrolledText(
+            self.debug_tab, wrap=tk.WORD, bg="black", fg="lightgreen"
+        )
+        self.debug_log_text.insert(tk.END, "开启debug功能后会在此处显示详细日志。")
         self.debug_log_text.pack(expand=True, fill="both")
-        self.clear_button = tk.Button(self.frame_cmd, text="清空Debug日志", command=self.clear_debug_log_text)
-        self.clear_button.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
-        # 设置Netmiko的debug日志输出到GUI中
-        self.enable_debug_logging = False        
-        self.debug_log_text.grid(row=0, column=0, sticky="nsew")
 
-        # 设置Grid布局以使文本框随着窗口大小自动调整
-        self.debug_log_tab.grid_rowconfigure(0, weight=1)
-        self.debug_log_tab.grid_columnconfigure(0, weight=1)
+        # 配置网格权重
+        self.frame_cmd.columnconfigure(0, weight=1)
+        self.frame_cmd.columnconfigure(1, weight=1)
+        self.frame_cmd.columnconfigure(2, weight=1)
+        self.frame_cmd.rowconfigure(1, weight=1)
+        self.frame_cmd.rowconfigure(3, weight=1)
 
+    def on_user_cmd_focus_in(self, event):
+        if self.user_cmd_text.get("1.0", "end-1c") == self.default_user_cmd:
+            self.user_cmd_text.delete("1.0", tk.END)
+            self.user_cmd_text.config(fg="black")
 
-        # 设置文本框的行和列权重
-        self.debug_log_text.grid_rowconfigure(0, weight=1)
-        self.debug_log_text.grid_columnconfigure(0, weight=1)
-       
-#
-        #使用说明页
-        self.notebook.pack(padx=10, pady=10, fill="both", expand=True)
-        
-        global 使用说明 
-        self.frame_detail = ttk.Frame(self.notebook)
-        # 添加标签页到末尾
-        self.notebook.add(self.frame_detail, text="使用说明", state="hidden")
-        self.使用说明文本框 = scrolledtext.ScrolledText(self.frame_detail, wrap=tk.WORD)
-        self.使用说明文本框.pack(pady=5, expand=True, fill="both")
-        
-        使用说明 = """这是一个基于python的netmiko库制作的网络自动化工具，可以实现网络设备批量自动化运维的基本功能。
-使用说明：
-1.请将设备配置信息保存为CSV文件，格式如下：
-ip,username,password,device_type,secret
-192.168.1.1,admin,admin,cisco_ios,,secret
-192.168.1.2,user,password,juniper_junos,secret\n192.168.1.3,admin,123456,cisco,secret
-(如有关键字未设置请在表格中留空)
-2.在导入配置文件时，出现错误提示大概率是配置文件格式问题。
-3.可用的设备类型包括且不限于以下种类：
-- cisco_ios: Cisco IOS设备
-- juniper_junos: Juniper Junos设备
-- arista_eos: Arista EOS设备
-- huawei: Huawei设备
-- hpe: HPE Comware设备
-- hp_comware: H3C设备
-- ruijie_os: 锐捷设备
-- zte_zxros:中兴设备
-- linux: 普通linux设备
+    def on_user_cmd_focus_out(self, event):
+        if not self.user_cmd_text.get("1.0", "end-1c"):
+            self.user_cmd_text.insert(tk.END, self.default_user_cmd)
+            self.user_cmd_text.config(fg="grey")
 
-[请在配置文件的device_type 列中选择上述设备类型之一填写。]
-4.在填写配置文件时，请注意区分设备类型，确保与实际设备一致。
-5.默认使用SSH连接。如需使用Telnet连接，在设备类型后增加"_telnet"，如：cisco_ios_telnet。
-6.使用debug功能可以实时看到工具执行命令时后台与所有设备的所有交互过程
-7.遇到ssh认证时间较长的设备，可以在设置页调整整体超时时间，否则可能会因为ssh认证超时导致连接失败"""
-        self.使用说明文本框.insert(tk.END,使用说明)
-        self.使用说明文本框.config(state=tk.DISABLED)
+    def on_config_cmd_focus_in(self, event):
+        if self.config_cmd_text.get("1.0", "end-1c") == self.default_config_cmd:
+            self.config_cmd_text.delete("1.0", tk.END)
+            self.config_cmd_text.config(fg="black")
 
+    def on_config_cmd_focus_out(self, event):
+        if not self.config_cmd_text.get("1.0", "end-1c"):
+            self.config_cmd_text.insert(tk.END, self.default_config_cmd)
+            self.config_cmd_text.config(fg="grey")
 
-        
-        # 创建导入配置页面
-        self.frame_config = ttk.Frame(self.notebook)
+    # --------------------- 配置文件导入页面 ---------------------
+    def create_config_tab(self):
+        self.frame_config = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.frame_config, text="导入配置文件")
 
-        tk.Label(self.frame_config, text="选择配置文件 (CSV格式)：").grid(row=1, column=0, pady=10)
+        ttk.Label(self.frame_config, text="选择配置文件 (CSV格式)：").grid(
+            row=1, column=0, sticky="w", padx=5, pady=5
+        )
+        ttk.Button(
+            self.frame_config, text="导入配置文件", command=self.import_config_file, width=20
+        ).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        ttk.Button(
+            self.frame_config, text="创建配置模板", command=self.open_config_template, width=20
+        ).grid(row=2, column=1, sticky="ew", padx=5, pady=5)
 
-        tk.Button(self.frame_config, text="导入配置文件", command=self.导入配置文件).grid(row=1, column=1, pady=10)
-        self.btn_generate_template = tk.Button(self.frame_config, text="创建配置模板", command=self.打开配置模板目录)
-        self.btn_generate_template.grid(row=2, column=1, pady=10)
-
-        # 创建Treeview来展示导入的配置信息
         self.tree_config = ttk.Treeview(self.frame_config, show="headings")
         self.tree_config["columns"] = ("Address", "Username", "Password", "Type", "Secret")
-        self.tree_config.heading("Address", text="地址", anchor=tk.CENTER)
-        self.tree_config.heading("Username", text="用户名", anchor=tk.CENTER)
-        self.tree_config.heading("Password", text="密码", anchor=tk.CENTER)
-        self.tree_config.heading("Type", text="类型", anchor=tk.CENTER)
-        self.tree_config.heading("Secret", text="Enable/Super密码", anchor=tk.CENTER)
-        # 设置列的宽度和对齐方式
+        for col, text in zip(
+            ("Address", "Username", "Password", "Type", "Secret"),
+            ("地址", "用户名", "密码", "类型", "Enable/Super密码")
+        ):
+            self.tree_config.heading(col, text=text, anchor=tk.CENTER)
         self.tree_config.column("Address", width=120, anchor=tk.CENTER)
         self.tree_config.column("Username", width=100, anchor=tk.CENTER)
         self.tree_config.column("Password", width=100, anchor=tk.CENTER)
         self.tree_config.column("Type", width=80, anchor=tk.CENTER)
         self.tree_config.column("Secret", width=120, anchor=tk.CENTER)
-        self.tree_config.grid(row=3, column=0, pady=5, columnspan=2, sticky="nsew")
+        self.tree_config.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
 
-        # 设置行和列的权重
-        self.frame_config.rowconfigure(3, weight=1)  # 第三行
-        self.frame_config.columnconfigure(0, weight=1)  # 第一列
-        self.frame_config.columnconfigure(1, weight=1)  # 第二列
-       
+        self.frame_config.rowconfigure(3, weight=1)
+        self.frame_config.columnconfigure(0, weight=1)
+        self.frame_config.columnconfigure(1, weight=1)
 
-        
+    def import_config_file(self):
+        file_path = filedialog.askopenfilename(
+            title="选择CSV文件", filetypes=[("CSV 文件", "*.csv")]
+        )
+        if file_path:
+            try:
+                with open(file_path, newline="", encoding="utf-8") as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    self.device_list = list(reader)
+                if self.validate_csv(self.device_list):
+                    self.tree_config.delete(*self.tree_config.get_children())
+                    for device in self.device_list:
+                        self.tree_config.insert(
+                            "",
+                            "end",
+                            text=f"Device {self.device_list.index(device) + 1}",
+                            values=(
+                                device["ip"],
+                                device["username"],
+                                device["password"],
+                                device["device_type"],
+                                device["secret"],
+                            ),
+                        )
+                else:
+                    messagebox.showerror("错误", "CSV文件格式无效，存在空行或参数不完整。")
+                    self.device_list = []
+            except Exception as e:
+                messagebox.showerror("错误", f"导入配置文件时发生错误：{str(e)}")
+                self.device_list = []
 
+    def validate_csv(self, device_list):
+        if not device_list:
+            return False
+        required_fields = ["ip", "username", "password", "device_type"]
+        for device in device_list:
+            if any(not device[field] for field in required_fields):
+                return False
+        return True
 
-
-        self.notebook.pack(padx=10, pady=10, fill="both", expand=True)
-        self.max_tab_count = 5
-        # 初始化设备列表
-        self.设备列表 = []
-        # 新增标签页
-        self.frame_test = ttk.Frame(self.notebook)
+    # --------------------- 连接测试页面 ---------------------
+    def create_connection_test_tab(self):
+        self.frame_test = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.frame_test, text="连接测试")
 
-        # 添加按钮
-        tk.Button(self.frame_test, text="测试连接", command=self.测试连接).pack(pady=10)
+        ttk.Button(
+            self.frame_test, text="测试连接", command=self.test_connection, width=20
+        ).pack(pady=10)
+        self.test_result_text = scrolledtext.ScrolledText(self.frame_test, wrap=tk.WORD)
+        self.test_result_text.pack(pady=5, expand=True, fill="both")
 
-        # 创建显示连接测试结果的文本框
-        self.连接测试结果文本 = scrolledtext.ScrolledText(self.frame_test, wrap=tk.WORD)
-        self.连接测试结果文本.pack(pady=5, expand=True, fill="both")
-        self.连接测试队列 = queue.Queue()
-        self.result_queue = queue.Queue()  # 初始化result_queue
+    def test_connection(self):
+        if not self.device_list:
+            messagebox.showinfo("提示", "当前未导入配置文件，请先导入符合模板的CSV文件")
+            self.import_config_file()
+            return
+        self.test_result_text.delete("1.0", tk.END)
+        self.test_result_text.insert(tk.END, "正在进行测试，请稍候...\n")
+        threads = []
+        for device in self.device_list:
+            t = threading.Thread(target=self.execute_test_connection, args=(device,), daemon=True)
+            threads.append(t)
+            t.start()
+        self.test_result_text.after(100, self.wait_for_test_threads, threads)
 
+    def execute_test_connection(self, device):
+        result = self.test_device_connection(device)
+        self.result_queue.put((device, result))
 
+    def wait_for_test_threads(self, threads):
+        if all(not t.is_alive() for t in threads):
+            success_count = 0
+            fail_count = 0
+            fail_devices = []
+            while not self.result_queue.empty():
+                device, result = self.result_queue.get()
+                if "成功" in result:
+                    success_count += 1
+                else:
+                    fail_count += 1
+                    fail_devices.append(device)
+            self.test_result_text.insert(tk.END, f"测试完成，共连接成功 {success_count} 台设备，连接失败 {fail_count} 台设备。\n")
+            if fail_count > 0:
+                self.test_result_text.insert(tk.END, f"错误信息已写入 {self.log_manager.log_folder}/error.log\n")
+                self.test_result_text.insert(tk.END, "连接失败的设备列表：\n")
+                for device in fail_devices:
+                    self.test_result_text.insert(tk.END, f"设备：{device['ip']}\n")
+        else:
+            self.test_result_text.after(500, self.wait_for_test_threads, threads)
 
-       
-        # 创建调试页面的新标签页
-        self.frame_debug = ttk.Frame(self.notebook)
+    def test_device_connection(self, device_info):
+        try:
+            self.test_result_text.insert(tk.END, f"{device_info['ip']}: 正在尝试连接...\n")
+            connection = ConnectHandler(**device_info, conn_timeout=self.global_timeout)
+            connection.disconnect()
+            return "连接成功"
+        except SSHException as e:
+            error_info = f"SSH 连接失败：{str(e)}"
+            self.log_manager.record_error(device_info, error_info)
+            return "连接失败"
+        except Exception as e:
+            error_info = f"连接失败：{str(e)}"
+            self.log_manager.record_error(device_info, error_info)
+            return "连接失败"
+
+    # --------------------- 调试页面 ---------------------
+    def create_debug_tab(self):
+        self.frame_debug = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.frame_debug, text="调试页面")
 
-        # 添加用于设置连接超时时间的标签和输入框
-        tk.Label(self.frame_debug, text="设置全局连接超时时间（秒）：").grid(row=0, column=0, pady=5, sticky=tk.W)
+        ttk.Label(self.frame_debug, text="设置全局连接超时时间（秒）：").grid(
+            row=0, column=0, sticky="w", padx=5, pady=5
+        )
+        self.timeout_entry = ttk.Entry(self.frame_debug, width=10)
+        self.timeout_entry.insert(tk.END, "10.0")
+        self.timeout_entry.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+        ttk.Button(
+            self.frame_debug, text="确认", command=self.confirm_timeout, width=15
+        ).grid(row=0, column=2, sticky="w", padx=5, pady=5)
+        self.global_timeout = 10.0
 
-       
-
-        # 使用 ttk.Entry
-        self.timeout_entry = ttk.Entry(self.frame_debug)
-        self.timeout_entry.insert(tk.END, "10.0")  # 设置默认值为10秒
-        self.timeout_entry.grid(row=0, column=2, pady=5)
-                # 使用 Style 对象配置样式，设置为斜体灰色
-        style = ThemedStyle(self.frame_debug)
-        style.configure("TEntry.Default.TEntry", font=("Arial", 10, "italic"), foreground="grey")
-
-        # 添加确认用户输入超时时间的按钮
-        tk.Button(self.frame_debug, text="确认", command=self.confirm_timeout).grid(row=0, column=4, columnspan=1, pady=1)
-        self.global_timeout = 10.0  # 默认全局连接超时时间为10秒
-    
-    
-     #---------------------编码选择--------------------------------#
-        tk.Label(self.frame_debug, text="选择编码:").grid(row=1, column=0, pady=5, sticky=tk.W)
-
-        # 编码选项
+        ttk.Label(self.frame_debug, text="选择编码:").grid(
+            row=1, column=0, sticky="w", padx=5, pady=5
+        )
         encoding_list = ["utf-8", "gbk", "gb2312", "big5", "ascii"]
+        self.encoding_combo = ttk.Combobox(self.frame_debug, values=encoding_list, width=10)
+        self.encoding_combo.current(0)
+        self.encoding_combo.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        ttk.Button(
+            self.frame_debug, text="设置编码", command=self.set_encoding, width=15
+        ).grid(row=1, column=2, sticky="w", padx=5, pady=5)
+        self.encoding_label = ttk.Label(self.frame_debug, text="当前编码: utf-8")
+        self.encoding_label.grid(row=2, column=0, sticky="w", padx=5, pady=5)
 
-        # 创建下拉选择框
-        self.编码下拉框 = ttk.Combobox(self.frame_debug, values=encoding_list)
-        self.编码下拉框.current(0)  # 默认选中第0个
-        self.编码下拉框.grid(row=1, column=2, pady=5, sticky=tk.W)
+    def set_encoding(self):
+        self.encoding = self.encoding_combo.get()
+        self.encoding_label.config(text=f"当前编码: {self.encoding}")
 
-        btn = tk.Button(self.frame_debug, text="设置编码", command=self.set_encoding)
-        btn.grid(row=1, column=4, pady=5, sticky=tk.W)
+    def confirm_timeout(self):
+        try:
+            timeout_value = float(self.timeout_entry.get())
+            result = messagebox.askyesno(
+                "确认",
+                f"您确定要修改全局连接超时时间为 {timeout_value} 秒吗？\n这可能会影响到其他操作。"
+            )
+            if result:
+                self.global_timeout = timeout_value
+                messagebox.showinfo("成功", f"全局连接超时时间已设置为 {timeout_value} 秒。")
+        except ValueError:
+            messagebox.showerror("错误", "请输入有效的数字作为超时时间。")
 
-        self.label_result = tk.Label(self.frame_debug, text="当前编码: utf-8")
-        self.label_result.grid(row=3, column=0, pady=5, sticky=tk.W)
+    def toggle_debug_logging(self):
+        self.enable_debug_flag = not self.enable_debug_flag
+        if self.enable_debug_flag:
+            response = messagebox.askquestion("确认", "确定开启调试日志吗？请确保配置文件中仅包含一台设备。")
+            if response == "yes":
+                self.set_debug_button_text("关闭Debug日志")
+                self.enable_netmiko_debug_logging()
+            else:
+                self.enable_debug_flag = not self.enable_debug_flag
+                self.set_debug_button_text("开启Debug日志")
+        else:
+            self.set_debug_button_text("开启Debug日志")
+            self.disable_netmiko_debug_logging()
 
+    def set_debug_button_text(self, text):
+        # 更新命令页中调试按钮的文字
+        for widget in self.frame_cmd.grid_slaves(row=5, column=0):
+            if isinstance(widget, ttk.Button):
+                widget.config(text=text)
 
+    def enable_netmiko_debug_logging(self):
+        logging.getLogger("netmiko").setLevel(logging.DEBUG)
+        logging.getLogger("paramiko").addHandler(DebugLogHandler(self.debug_log_text))
+        logging.getLogger("netmiko").addHandler(DebugLogHandler(self.debug_log_text))
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger("netmiko")
+        file_handler = logging.FileHandler(f"{self.log_manager.log_folder}/AutoNetPy_debug.log")
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        for log in [logging.getLogger("paramiko")]:
+            log.addHandler(file_handler)
 
+    def disable_netmiko_debug_logging(self):
+        for handler in logging.getLogger("netmiko").handlers[:]:
+            logging.getLogger("netmiko").removeHandler(handler)
 
+    def clear_debug_log_text(self):
+        self.debug_log_text.delete("1.0", tk.END)
 
-
-
-       # 添加关于页面的内容
-        self.frame_info = ttk.Frame(self.notebook)
+    # --------------------- 关于页面 ---------------------
+    def create_about_tab(self):
+        self.frame_info = ttk.Frame(self.notebook, padding=10)
         self.notebook.add(self.frame_info, text="关于")
-
-        
-        tk.Label(self.frame_info, text="AutoNetPy ").grid(row=0, column=0, pady=10, sticky=tk.W)
-
-
-        # ASCII图片
+        ttk.Label(self.frame_info, text="AutoNetPy", font=("Helvetica", 14, "bold")).grid(
+            row=0, column=0, sticky="w", padx=5, pady=10
+        )
         ascii_art = """
 　    ∧＿ ∧
 　  (   ´  ∀ ` )
 　  (　　     )
 　  ｜   ｜ ｜
 　  (_＿  )＿)
-
-
 """
-
-        tk.Label(self.frame_info, text=ascii_art).grid(row=4, column=0, pady=10, sticky=tk.W)
-
-        self.notebook.select(1) 
-        # 在"关于"页面上显示设备类型列表
+        ttk.Label(self.frame_info, text=ascii_art, font=("Consolas", 12)).grid(
+            row=4, column=0, sticky="w", padx=5, pady=10
+        )
         self.create_device_table(self.frame_info)
 
-
     def create_device_table(self, frame):
-        # 设置页面的标题
-
-
-        # 按钮用于显示设备类型表格
-        btn_show_table = tk.Button(frame, text="查看工具支持的设备类型", command=self.show_device_table)
-        btn_show_table.grid(row=0, column=1, pady=5, padx=5, sticky=tk.W)
+        btn = ttk.Button(frame, text="查看工具支持的设备类型", command=self.show_device_table, width=25)
+        btn.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
     def show_device_table(self):
-        # 获取 Netmiko 的设备类型数据
         device_types = []
         for device in CLASS_MAPPER.keys():
-            device_info = device.split('_')
-            # 确保设备信息包含至少 3 个部分，避免多余的列
-            if len(device_info) == 3:
-                device_types.append((device, *device_info))
-
-        # 创建新窗口
-        window = tk.Toplevel(self.主窗口)
+            parts = device.split("_")
+            if len(parts) == 3:
+                device_types.append((device, *parts))
+        window = tk.Toplevel(self.master)
         window.title("设备类型表格")
         window.geometry("700x400")
-        
-        # 创建搜索框和按钮
-        search_label = tk.Label(window, text="搜索:")
-        search_label.pack(padx=10, pady=5, anchor=tk.W)
-
-        search_entry = tk.Entry(window)
-        search_entry.pack(padx=10, pady=5, fill=tk.X)
+        ttk.Label(window, text="搜索:", font=("Helvetica", 10)).pack(padx=10, pady=5, anchor="w")
+        search_entry = ttk.Entry(window, width=30)
+        search_entry.pack(padx=10, pady=5, fill="x")
 
         def search():
-            search_query = search_entry.get().lower()
-
-            # 清空当前显示的所有行
+            query = search_entry.get().lower()
             for row in tree.get_children():
                 tree.delete(row)
+            for dev in device_types:
+                if any(query in str(val).lower() for val in dev):
+                    tree.insert("", "end", values=dev)
 
-            # 插入匹配搜索内容的行
-            for device in device_types:
-                # 判断该行是否匹配搜索条件
-                if any(search_query in str(value).lower() for value in device):
-                    tree.insert("", "end", values=device)
-
-        search_button = tk.Button(window, text="搜索", command=search)
-        search_button.pack(padx=10, pady=5)
-
-        # 创建Treeview控件并添加滚动条
+        ttk.Button(window, text="搜索", command=search, width=10).pack(padx=10, pady=5)
         tree_frame = ttk.Frame(window)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        tree_scroll_y = ttk.Scrollbar(tree_frame, orient="vertical")
-        tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
-
-        tree_scroll_x = ttk.Scrollbar(tree_frame, orient="horizontal")
-        tree_scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
-
-        tree = ttk.Treeview(tree_frame, columns=("设备类型", "厂商", "类别", "连接方式"), show="headings", yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
-
-        # 设置列标题
-        tree.heading("设备类型", text="设备类型")
-        tree.heading("厂商", text="厂商")
-        tree.heading("类别", text="类别")
-        tree.heading("连接方式", text="连接方式")
-        
-        # 设置列宽度
+        tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        y_scroll = ttk.Scrollbar(tree_frame, orient="vertical")
+        y_scroll.pack(side="right", fill="y")
+        x_scroll = ttk.Scrollbar(tree_frame, orient="horizontal")
+        x_scroll.pack(side="bottom", fill="x")
+        tree = ttk.Treeview(
+            tree_frame,
+            columns=("设备类型", "厂商", "类别", "连接方式"),
+            show="headings",
+            yscrollcommand=y_scroll.set,
+            xscrollcommand=x_scroll.set,
+        )
+        for col, title in zip(("设备类型", "厂商", "类别", "连接方式"), ("设备类型", "厂商", "类别", "连接方式")):
+            tree.heading(col, text=title)
         tree.column("设备类型", width=200)
         tree.column("厂商", width=150)
         tree.column("类别", width=150)
         tree.column("连接方式", width=150)
-        
-        # 插入数据到Treeview
-        for device in device_types:
-            tree.insert("", "end", values=device)
-        
-        # 放置Treeview控件并配置滚动条
-        tree.pack(fill=tk.BOTH, expand=True)
-        tree_scroll_y.config(command=tree.yview)
-        tree_scroll_x.config(command=tree.xview)
+        for dev in device_types:
+            tree.insert("", "end", values=dev)
+        tree.pack(fill="both", expand=True)
+        y_scroll.config(command=tree.yview)
+        x_scroll.config(command=tree.xview)
 
-    def set_encoding(self):
-        global encoding
-        encoding = self.编码下拉框.get()  # 获取下拉框的内容
-        self.label_result.config(text=f"当前编码: {encoding}")
-    
-    # 确认用户输入的超时时间的函数
-    def confirm_timeout(self):
-        try:
-            # 获取用户输入的超时时间
-            timeout_value = float(self.timeout_entry.get())
-
-            # 弹出确认对话框
-            confirm_result = messagebox.askyesno("确认", f"您确定要修改全局连接超时时间为 {timeout_value} 秒吗？\n这可能会影响到其他操作。")
-
-            if confirm_result:
-                # 存储全局连接超时时间
-                self.global_timeout = timeout_value
-
-                messagebox.showinfo("成功", f"全局连接超时时间已设置为 {timeout_value} 秒。")
-            else:
-                return
-
-        except ValueError:
-            messagebox.showerror("错误", "请输入有效的数字作为超时时间。")
-
-  
-    def clear_debug_log_text(self):
-        # 清空文本框内容
-        self.debug_log_text.delete(1.0, tk.END)
-    # 新增一个方法，用于切换Netmiko的debug日志输出状态
-    
-    
-    def toggle_debug_logging(self):
-    # 切换调试日志的状态
-        self.enable_debug_logging = not self.enable_debug_logging
-        
-        # 根据状态设置按钮文本，并调用相应的方法
-        if self.enable_debug_logging:
-            # 弹窗提示用户确认
-            response = messagebox.askquestion("确认", "您确定要开启调试日志吗？请确保配置文件中只有一台设备。")
-            
-            # 根据用户的选择进行处理
-            if response == 'yes':
-                self.debug_button.config(text="关闭Debug日志")
-                self.enable_netmiko_debug_logging()
-            else:
-                # 如果用户选择不开启调试日志，恢复按钮状态
-                self.enable_debug_logging = not self.enable_debug_logging
-                self.debug_button.config(text="开启Debug日志")
-        else:
-            # 关闭调试日志
-            self.debug_button.config(text="开启Debug日志")
-            self.disable_netmiko_debug_logging()
-
-
-    # 新增一个方法，用于开启并处理Netmiko的debug日志输出
-    def enable_netmiko_debug_logging(self):
-        # 设置Netmiko的debug日志输出级别为DEBUG
-        logging.getLogger("netmiko").setLevel(logging.DEBUG)
-        # 将Netmiko的debug日志输出到GUI中
-        logging.getLogger("paramiko").addHandler(self.DebugLogHandler(self.debug_log_text))
-        # logging.getLogger("paramiko.transport").addHandler(self.DebugLogHandler(self.debug_log_text))
-        # logging.getLogger("paramiko.transport.sftp").addHandler(self.DebugLogHandler(self.debug_log_text))
-        logging.getLogger("netmiko").addHandler(self.DebugLogHandler(self.debug_log_text))
-        # 将Netmiko的debug日志输出到终端中
-        logging.basicConfig(level=logging.DEBUG)
-        logger = logging.getLogger("netmiko")
-        # 创建一个文件处理程序，将日志写入到指定的文件中
-        file_handler = logging.FileHandler(f"{self.log_folder}/AutoNetPy_debug.log")
-
-        # 设置文件处理程序的日志级别为DEBUG
-        file_handler.setLevel(logging.DEBUG)
-
-        # 创建一个格式化程序，定义日志的输出格式
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        file_handler.setFormatter(formatter)
-
-        # 将文件处理程序添加到logger对象中
-        logger.addHandler(file_handler)
-        other_loggers = [
-            logging.getLogger("paramiko"),
-
-        ]
-
-        for logger in other_loggers:
-            logger.addHandler(file_handler)
-    # 新增一个方法，用于关闭Netmiko的debug日志输出
-    def disable_netmiko_debug_logging(self):
-        # 移除Netmiko的debug日志处理器
-        handlers = logging.getLogger("netmiko").handlers[:]
-        for handler in handlers:
-            logging.getLogger("netmiko").removeHandler(handler)
-
-    # 新增一个内部类，用于处理Netmiko的debug日志输出
-    class DebugLogHandler(logging.Handler):
-        def __init__(self, text_widget):
-            super().__init__()
-            self.text_widget = text_widget
-        def emit(self, record):
-            log_entry = self.format(record)
-                
-            self.text_widget.insert(tk.END, log_entry + "\n")
-            self.text_widget.yview(tk.END)
-    #新增一个方法，打开日志目录
-    def 打开日志目录(self):
-     # 检查日志是否存在，如果不存在则创建
-        self.检查日志()
-        日志目录=self.log_folder
-        if os.name == "nt":  # Windows
-            subprocess.Popen(f'explorer {日志目录}')
-        elif os.name == "posix":  # macOS, Linux
-            subprocess.Popen(["xdg-open", 日志目录])
-        else:
-            tk.messagebox.showinfo("提示", "打开文件管理器失败，未知的操作系统类型")
+    # --------------------- 命令执行及工具逻辑 ---------------------
+    def run_user_command(self):
+        if not self.device_list:
+            messagebox.showinfo("提示", "当前未导入配置文件")
+            self.import_config_file()
             return
-
-    def 清除连接测试结果(self):
-        self.连接测试结果文本.delete("1.0", tk.END)
-
-    def 显示连接测试结果(self, 设备, 结果):
-        self.连接测试结果文本.insert(tk.END, f"设备：{设备['ip']} - {结果}\n")        
-    def 测试连接(self):
-        if self.设备列表 == []:
-            tk.messagebox.showinfo("提示", "当前未导入配置文件，请选择符合模板的.csv文件作为配置文件")
-            self.导入配置文件()
-        self.清除连接测试结果()
-        self.连接测试结果文本.insert(tk.END, "正在进行测试，请稍候...\n")
-
-        # 创建子线程，每个线程处理一个设备
-        threads = [threading.Thread(target=self.执行测试连接, args=(设备,), daemon=True) for 设备 in self.设备列表]
-
-        # 启动所有子线程
-        for thread in threads:
-            thread.start()
-
-        # 直接返回，主线程不会被阻塞
-        self.连接测试结果文本.after(100, self.等待子线程完成, threads)
-
-        return threads
-        
-
-    def 执行测试连接(self, 设备):
-        结果 = self.测试设备连接(设备)
-        # 将测试结果放入队列
-        self.result_queue.put((设备, 结果))
-    def 等待子线程完成(self, threads):
-        # 等待一段时间以确保所有子线程都有足够的时间完成
-        self.连接测试结果文本.after(500, self.检查子线程完成, threads)
-            
-    def 检查子线程完成(self, threads):
-        # 检查所有子线程是否完成
-        if all(not thread.is_alive() for thread in threads):
-            # 所有子线程完成后，在主线程中更新 GUI
-            成功设备数 = 0
-            失败设备数 = 0
-            失败设备列表 = []  # 新增一个列表用于存储失败设备
-
-            while not self.result_queue.empty():
-                设备, 结果 = self.result_queue.get()
-                if "成功" in 结果:
-                    成功设备数 += 1
-                elif "失败" in 结果:
-                    失败设备数 += 1
-                    失败设备列表.append(设备)  # 将失败设备添加到列表中
-
-            # 输出测试结果
-            self.连接测试结果文本.insert(tk.END, f"测试完成，共连接成功 {成功设备数} 台设备，连接失败 {失败设备数} 台设备。\n")
-
-            # 如果存在失败设备，输出失败设备列表
-            if 失败设备数 > 0:
-                self.连接测试结果文本.insert(tk.END, f"连接失败原因已经写入{self.log_folder}/error.log\n")
-                self.连接测试结果文本.insert(tk.END, "连接失败的设备列表：\n")
-                for 设备 in 失败设备列表:
-                    self.连接测试结果文本.insert(tk.END, f"设备：{设备['ip']}\n")
-
-            # 执行其他操作（如果有的话）
-        else:
-            # 如果还有子线程未完成，继续等待
-            self.连接测试结果文本.after(500, self.检查子线程完成, threads)
-
-    def 监听连接测试队列(self, threads):
-        for thread in threads:
-            thread.join()  # 等待每个子线程结束
-
-        # 所有子线程已结束，从队列中获取结果并更新到GUI
-        try:
-            while True:
-                设备, 结果 = self.连接测试队列.get_nowait()
-                self.显示连接测试结果(设备, 结果)
-        except queue.Empty:
-            pass
-        
-    def 测试设备连接(self, 设备信息):
-        try:
-            self.连接测试结果文本.insert(tk.END, f"{设备信息['ip']}:正在尝试连接...\n")
-            # 尝试连接
-            connection = ConnectHandler(**设备信息,conn_timeout=self.global_timeout)
-            connection.disconnect()
-            return "连接成功"
-        except SSHException as e:
-            错误信息 = f"SSH 连接失败：{str(e)}"
-            self.记录错误信息(设备信息, 错误信息)
-            return "连接失败"  # 连接失败时返回简要信息
-        except Exception as e:
-            错误信息 = f"连接失败：{str(e)}"
-            self.记录错误信息(设备信息, 错误信息)
-            return "连接失败"  # 连接失败时返回简要信息
-    def 显示连接测试结果(self, 设备信息, 结果):
-        self.连接测试结果文本.insert(tk.END, f"设备：{设备信息['ip']} - {结果}\n")
-    def 记录错误信息(self, 设备信息, 错误信息):
-        # 获取当前日期时间
-        当前时间 = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # 构造错误日志文件的完整路径
-        错误日志文件路径 = os.path.join(self.log_folder, "error.log")
-
-        # 将详细错误信息、设备IP和时间写入错误日志文件
-        with open(错误日志文件路径, "a",encoding="utf-8") as error_log:
-            error_log.write(f"设备：{设备信息['ip']}，报错时间：{当前时间}\n")
-            error_log.write(f"详细错误信息：\n{错误信息}\n")
-    
-    def 检查日志(self):
-        # 检查日志是否存在，如果不存在则创建
-        if not os.path.exists(self.log_folder):
-            os.makedirs(self.log_folder)
-            print(f"创建日志文件夹：{self.log_folder}")
- 
-    def 清空执行结果(self):
-        # 遍历字典中的标签页
-        for ip, 标签页 in list(self.设备标签页字典.items()):
-            # 清空文本框内容
-            标签页['text_widget'].delete("1.0", tk.END)
-
-
-
-        
-    def 打开配置模板目录(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # 生成配置模板
-        template_content = "ip,username,password,device_type,secret\n192.168.1.1,admin,admin,cisco_ios,enable_pwd"
-        template_path = os.path.join(script_dir, "配置模板.csv")
-        with open(template_path, "w") as template_file:
-            template_file.write(template_content)
-        
-
-        # 提示生成成功
-        messagebox.showinfo("提示", f"配置模板已创建，请检查路径{script_dir}")
-   
-    def 运行工具(self, 用户视图命令, 配置视图命令):
-        # def update_label():
-        #     current_text = label.cget("text")
-        #     if current_text.endswith("...."):
-        #         new_text = "命令正在并发执行中，请稍等"
-        #     else:
-        #         new_text = current_text + "."
-        #     label.config(text=new_text)
-        #     new_window.after(500, update_label)  # 500毫秒后再次更新
-
-        # new_window = tk.Toplevel()
-        # new_window.title("提示")
-        # new_window.geometry("400x200")
-
-        # label = tk.Label(new_window, text="命令执行中，请稍等")
-        # label.pack(padx=20, pady=20)
-
-        # update_label()
-        进度条提示框 = tk.Tk()
-        进度条提示框.title("正在并发执行任务")
-        进度条提示框.geometry("300x100")
-
-        label = tk.Label(进度条提示框, text="0%", font=("Helvetica", 12))
-        label.pack(pady=10)
-
-        bar = ttk.Progressbar(进度条提示框, orient="horizontal", length=200, mode="determinate")
-        bar.pack(pady=10)
-
-        # 计算每个更新所需的时间
-        total_time = 1  # 秒
-        update_interval = total_time / 100  # 每个百分比的时间
-        start_time = time.time()
-
-        # 模拟进度更新
-        for i in range(100):
-            elapsed_time = time.time() - start_time
-            remaining_time = max(0, total_time - elapsed_time)
-            update_progress(进度条提示框, i, bar, label)
-            进度条提示框.after(int(update_interval * 1000))  # 将秒转换为毫秒
-        
-        # 使用队列来保存每个子线程的结果
-        result_queue = queue.Queue()
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # 使用 executor.submit() 提交每个任务
-            futures = [executor.submit(self.执行命令, 设备, 用户视图命令, 配置视图命令, result_queue) for 设备 in self.设备列表]
-
-            # 使用 as_completed 等待所有任务完成
-            for future in concurrent.futures.as_completed(futures):
-                设备信息, 输出结果 = future.result()
-                self.显示运行结果(设备信息, 输出结果)
-        # new_window.destroy()
-        进度条提示框.destroy() 
-        messagebox.showinfo("任务完成", f"所有任务已完成，工具最多支持5个标签展示执行回显.\n更多设备详情请查看路径{self.log_folder}")
-
-
-    def 运行用户视图命令(self):
-        
-        if self.设备列表 == []:
-            tk.messagebox.showinfo("提示", "当前未导入配置文件")
-            self.导入配置文件()
-        用户视图命令 = self.用户视图命令文本.get("1.0", tk.END).strip()
-        if "可输入单行或多行命令，如：" in 用户视图命令:
-            用户视图命令 =""
-        配置视图命令 = ""
-        if 用户视图命令 == "":
-            tk.messagebox.showinfo("提示", "请在对应输入框输入命令")
+        user_cmd = self.user_cmd_text.get("1.0", tk.END).strip()
+        if "可输入单行或多行命令，如：" in user_cmd:
+            user_cmd = ""
+        if not user_cmd:
+            messagebox.showinfo("提示", "请在用户视图命令输入框中输入命令")
             return
-            
-        self.清空执行结果()
+        config_cmd = ""
+        self.clear_execution_results()
+        threading.Thread(target=self.listen_result_queue, args=(self.result_queue,), daemon=True).start()
+        threading.Thread(target=self.run_tool, args=(user_cmd, config_cmd), daemon=True).start()
 
-        # 在主线程中监听队列
-        threading.Thread(target=self.监听结果队列, args=(self.result_queue,)).start()
-
-        # 启动执行工具的子线程
-        threading.Thread(target=self.运行工具, args=(用户视图命令, 配置视图命令)).start()
-
-    def 运行配置视图命令(self):
-        
-        配置视图命令 = self.配置视图命令文本.get("1.0", tk.END).strip()
-        if "可输入单行或多行命令，如：" in 配置视图命令:
-            配置视图命令 =""
-            if 配置视图命令 == "":
-                tk.messagebox.showinfo("提示", "请在对应输入框输入命令")
-                return
-        
-        result = messagebox.askyesno("确认", f"核对命令：\n{配置视图命令}\n开始执行后无法回退，是否继续操作？")
+    def run_config_command(self):
+        config_cmd = self.config_cmd_text.get("1.0", tk.END).strip()
+        if "可输入单行或多行命令，如：" in config_cmd:
+            config_cmd = ""
+        if not config_cmd:
+            messagebox.showinfo("提示", "请在配置视图命令输入框中输入命令")
+            return
+        result = messagebox.askyesno("确认", f"核对命令：\n{config_cmd}\n执行后无法回退，是否继续？")
         if result:
-            if self.设备列表 == []:
-                tk.messagebox.showinfo("提示", "当前未导入配置文件")
-                self.导入配置文件()
-            用户视图命令 = ""
-
-            self.清空执行结果()
-
-            # 在主线程中监听队列
-            threading.Thread(target=self.监听结果队列, args=(self.result_queue,)).start()
-
-            # 启动执行工具的子线程
-            threading.Thread(target=self.运行工具, args=(用户视图命令, 配置视图命令)).start()
+            if not self.device_list:
+                messagebox.showinfo("提示", "当前未导入配置文件")
+                self.import_config_file()
+                return
+            user_cmd = ""
+            self.clear_execution_results()
+            threading.Thread(target=self.listen_result_queue, args=(self.result_queue,), daemon=True).start()
+            threading.Thread(target=self.run_tool, args=(user_cmd, config_cmd), daemon=True).start()
         else:
-            return      
+            return
 
+    def run_tool(self, user_cmd, config_cmd):
+        # 显示带有进度条的弹窗
+        progress_win = tk.Toplevel(self.master)
+        progress_win.title("任务执行中")
+        progress_win.geometry("300x100")
+        ttk.Label(progress_win, text="正在执行，请稍候...").pack(pady=5)
+        bar = ttk.Progressbar(progress_win, orient="horizontal", length=200, mode="determinate")
+        bar.pack(pady=5)
+        for i in range(101):
+            bar["value"] = i
+            progress_win.update_idletasks()
+            time.sleep(0.01)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self.execute_command, device, user_cmd, config_cmd, self.result_queue)
+                for device in self.device_list
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                device_info, output = future.result()
+                self.display_execution_result(device_info, output)
+        progress_win.destroy()
+        messagebox.showinfo("任务完成", f"任务执行完毕，详细日志请查看 {self.log_manager.log_folder}")
 
-
-
-
-
-    def 执行工具定时器(self, 设备索引, 用户视图命令, 配置视图命令):
-        if 设备索引 < len(self.设备列表):
-            设备 = self.设备列表[设备索引]
-            结果 = self.执行命令(设备, 用户视图命令, 配置视图命令)
-            self.显示运行结果(设备, 结果)
-            self.主窗口.after(100, self.执行工具定时器, 设备索引 + 1, 用户视图命令, 配置视图命令)
-
-    def 执行工具(self, 用户视图命令, 配置视图命令):
-        for 设备 in self.设备列表:
-            结果 = self.执行命令(设备, 用户视图命令, 配置视图命令)
-            self.显示运行结果(设备, 结果)
-
-    def 导入配置文件(self):
-        文件路径 = filedialog.askopenfilename(title="选择CSV文件", filetypes=[("./CSV 文件", "*.csv")])
-        if 文件路径:
-            try:
-                with open(文件路径, newline='') as csv文件:
-                    # 在DictReader中添加fieldnames参数
-                    读者 = csv.DictReader(csv文件)
-                    self.设备列表 = list(读者)
-                
-                # 校验CSV文件是否存在空行和参数完整性
-                if self.检查CSV文件有效性(self.设备列表):
-                    # 清空现有的表格数据
-                    self.tree_config.delete(*self.tree_config.get_children())
-
-                    # 读取CSV文件，并将数据显示在表格中
-                    for 设备 in self.设备列表:
-                        self.tree_config.insert("", "end", text=f"Device {self.设备列表.index(设备) + 1}",
-                                                values=(设备['ip'], 设备['username'], 设备['password'], 设备['device_type'], 设备['secret']))
-
-                else:
-                    tk.messagebox.showerror("错误", "CSV文件格式无效，存在空行或参数不完整。请检查文件格式。")
-                    self.设备列表 = []  # 清空设备列表
-            except Exception as e:
-                tk.messagebox.showerror("错误", f"导入配置文件时发生错误：{str(e)}")
-                self.设备列表 = []  # 清空设备列表
-
-    def 检查CSV文件有效性(self, 设备列表):
-        if not 设备列表:
-            return False
-
-        required_fields = ['ip', 'username', 'password', 'device_type']
-        for 设备 in 设备列表:
-            if any(not 设备[field] for field in required_fields):
-                return False  # 存在参数不完整的情况
-
-        return True  # CSV文件格式有效
-    def 执行命令(self, 设备信息, 用户视图命令, 配置视图命令, result_queue):
+    def execute_command(self, device_info, user_cmd, config_cmd, result_queue):
         start_time = time.time()
-        输出结果 = ""  # 在函数开头初始化输出变量
-        
+        output = ""
         try:
-            # 设备类型自动检测
-            if 设备信息.get('device_type') == 'autodetect':
-                连接探测器 = SSHDetect(**设备信息, conn_timeout=self.global_timeout)
-                设备类型 = 连接探测器.autodetect()
-                
-                if not 设备类型:
-                    return 设备信息, f"无法检测到设备类型，设备：{设备信息['ip']}"
-                
-                设备信息['device_type'] = 设备类型
+            if device_info.get("device_type") == "autodetect":
+                detector = SSHDetect(**device_info, conn_timeout=self.global_timeout)
+                detected_type = detector.autodetect()
+                if not detected_type:
+                    return device_info, f"无法检测到设备类型，设备：{device_info['ip']}"
+                device_info["device_type"] = detected_type
 
-            # 连接设备
-            连接 = ConnectHandler(**设备信息, conn_timeout=self.global_timeout, global_delay_factor=2,encoding=encoding)
-            
-            # 处理用户视图命令
-            if 用户视图命令:
-                输出结果 += f"用户视图命令：\n---------------------\n{用户视图命令}\n---------------------\n"
-                输出结果 += f"\n当前编码：{encoding}\n---------------------\n"
-                # H3C设备特殊处理
-                if 设备信息['device_type'] == "hp_comware":
-                    输出结果 = self.h3c_superpwd(设备信息, 连接, 输出结果)
-                
-                输出结果 += 连接.send_command_timing(用户视图命令, delay_factor=2) + "\n"
-                
-                end_time = time.time()
-                total_time = end_time - start_time
-                输出结果 += f"\n---------------------\n{设备信息['ip']}：执行完成,耗时:" + str(total_time)
-
-            # 处理配置视图命令
-            if 配置视图命令:
-                输出结果 += f"配置视图命令：\n---------------------\n{配置视图命令}\n---------------------\n"
-                
-                # H3C设备特殊处理
-                if 设备信息['device_type'] == "hp_comware":
-                    输出结果 = self.h3c_superpwd(设备信息, 连接, 输出结果)
-                    # H3C设备需要进入system-view
-                    连接.send_command_timing("system-view", delay_factor=2)
-                
-                输出结果 += 连接.send_config_set(配置视图命令) + "\n"
-                
-                # 保存配置
-                save_output = 连接.save_config()
-                输出结果 += save_output + "\n"
-                
-                end_time = time.time()
-                total_time = end_time - start_time
-                输出结果 += f"\n---------------------\n{设备信息['ip']}：执行完成,已自动对远端设备进行保存操作,耗时:" + str(total_time)
-
-            # 日志记录
+            connection = ConnectHandler(
+                **device_info, conn_timeout=self.global_timeout, global_delay_factor=2, encoding=self.encoding
+            )
+            if user_cmd:
+                output += f"用户视图命令：\n---------------------\n{user_cmd}\n---------------------\n"
+                output += f"\n当前编码：{self.encoding}\n---------------------\n"
+                if device_info["device_type"] == "hp_comware":
+                    output = self.h3c_superpwd(device_info, connection, output)
+                output += connection.send_command_timing(user_cmd, delay_factor=2) + "\n"
+                elapsed = time.time() - start_time
+                output += f"\n---------------------\n{device_info['ip']}：执行完成,耗时: {elapsed:.2f} 秒"
+            if config_cmd:
+                output += f"配置视图命令：\n---------------------\n{config_cmd}\n---------------------\n"
+                if device_info["device_type"] == "hp_comware":
+                    output = self.h3c_superpwd(device_info, connection, output)
+                    connection.send_command_timing("system-view", delay_factor=2)
+                output += connection.send_config_set(config_cmd) + "\n"
+                save_out = connection.save_config()
+                output += save_out + "\n"
+                elapsed = time.time() - start_time
+                output += f"\n---------------------\n{device_info['ip']}：执行完成,保存操作耗时: {elapsed:.2f} 秒"
             current_date = datetime.now().strftime("%Y%m%d_%H")
-            datetime_Day = datetime.now().strftime("%Y%m%d")
-            log_filename = f"{设备信息['ip']}-{current_date}.txt"
-            结果_路径 = os.path.join(self.log_folder, datetime_Day)
-            log_filepath = os.path.join(self.log_folder, datetime_Day, log_filename)
-            
-            if not os.path.exists(结果_路径):
-                os.makedirs(结果_路径, exist_ok=True)   
-                
-            precise_date = datetime.now().strftime("%Y%m%d--%H:%M:%S")
+            day_str = datetime.now().strftime("%Y%m%d")
+            log_filename = f"{device_info['ip']}-{current_date}.txt"
+            result_dir = os.path.join(self.log_manager.log_folder, day_str)
+            if not os.path.exists(result_dir):
+                os.makedirs(result_dir, exist_ok=True)
+            precise_time = datetime.now().strftime("%Y%m%d--%H:%M:%S")
+            log_filepath = os.path.join(result_dir, log_filename)
             with open(log_filepath, "a", encoding="utf-8") as log_file:
-                log_file.write(f"设备：{设备信息['ip']}\n")
-                log_file.write(f"执行时间：{precise_date}\n")
-                log_file.write(f"{输出结果}\n")
-
-            # 将结果放入队列
+                log_file.write(f"设备：{device_info['ip']}\n")
+                log_file.write(f"执行时间：{precise_time}\n")
+                log_file.write(f"{output}\n")
             if result_queue is not None:
-                result_queue.put((设备信息, 输出结果))
-                
-            return 设备信息, 输出结果
-
+                result_queue.put((device_info, output))
+            return device_info, output
         except Exception as e:
             error_msg = f"错误：{str(e)}"
             if result_queue is not None:
-                result_queue.put((设备信息, error_msg))
-            return 设备信息, error_msg
+                result_queue.put((device_info, error_msg))
+            return device_info, error_msg
         finally:
-            if '连接' in locals():
-                连接.disconnect()
+            if "connection" in locals():
+                connection.disconnect()
 
-    def h3c_superpwd(self, 设备信息, 连接, 输出结果):
-        """H3C设备提权处理"""
-        if 设备信息.get("secret"):
-            连接.write_channel("super\n")
+    def h3c_superpwd(self, device_info, connection, output):
+        if device_info.get("secret"):
+            connection.write_channel("super\n")
             time.sleep(0.5)
-            连接.write_channel(f"{设备信息['secret']}\n")
-            time.sleep(1)  # 等待密码生效
-            
-            # 读取回显判断是否成功
-            output = 连接.read_channel()
-            if "Password has not been set" in output:
-                输出结果 += "设备没有设置super密码，请检查配置文件是否错误\n"
-            elif "Permission denied" in output:
-                输出结果 += "super密码错误，提权失败\n"
+            connection.write_channel(f"{device_info['secret']}\n")
+            time.sleep(1)
+            chan_out = connection.read_channel()
+            if "Password has not been set" in chan_out:
+                output += "设备未设置super密码，请检查配置文件\n"
+            elif "Permission denied" in chan_out:
+                output += "super密码错误，提权失败\n"
             else:
-                输出结果 += "提权成功\n"
-                # 检查是否进入特权模式
-                prompt = 连接.find_prompt()
+                output += "提权成功\n"
+                prompt = connection.find_prompt()
                 if ">" in prompt or "]" in prompt:
-                    输出结果 += f"当前提示符：{prompt}\n"
-                    连接.send_command_timing("screen-length disable", delay_factor=2)
+                    output += f"当前提示符：{prompt}\n"
+                    connection.send_command_timing("screen-length disable", delay_factor=2)
                 else:
-                    输出结果 += "未能进入特权模式\n"
-        
-        return 输出结果
-       
+                    output += "未能进入特权模式\n"
+        return output
 
-    def 监听结果队列(self, result_queue):
-        # 在主线程中监听队列，获取结果并更新GUI
+    def listen_result_queue(self, result_queue):
         while True:
             try:
-                设备信息, 输出结果 = result_queue.get_nowait()
-                self.显示运行结果(设备信息, 输出结果)
+                device_info, output = result_queue.get_nowait()
+                self.display_execution_result(device_info, output)
             except queue.Empty:
                 break
 
+    def display_execution_result(self, device_info, output):
+        ip = device_info["ip"]
+        if ip not in self.device_tabs:
+            if len(self.device_tabs) >= self.max_tab_count:
+                return
+            tab = ttk.Frame(self.notebook_results)
+            self.notebook_results.add(tab, text=f"{ip} 日志")
+            text_widget = scrolledtext.ScrolledText(tab, wrap=tk.WORD, bg="black", fg="lightgreen")
+            text_widget.pack(expand=True, fill="both")
+            self.device_tabs[ip] = {"text_widget": text_widget}
+        widget = self.device_tabs[ip]["text_widget"]
+        widget.insert(tk.END, f"设备：{ip}\n")
+        widget.insert(tk.END, output + "\n\n")
 
+    def clear_execution_results(self):
+        for ip, tab in list(self.device_tabs.items()):
+            tab["text_widget"].delete("1.0", tk.END)
 
-    def 显示运行结果(self, 设备, 结果):
-        if 设备['ip'] not in self.设备标签页字典:
-            if len(self.设备标签页字典) >= self.max_tab_count:
-               
-                return  # 不创建新标签页
- 
-            # 添加新标签页
-            标签页 = ttk.Frame(self.notebook_results)
-            self.notebook_results.add(标签页, text=f"{设备['ip']} 日志")
-            self.设备标签页字典[设备['ip']] = {'text_widget': scrolledtext.ScrolledText(标签页, wrap=tk.WORD, bg="black", fg="lightgreen")}
-            
-            self.设备标签页字典[设备['ip']]['text_widget'].pack(expand=True, fill="both")
+    def open_config_template(self):
+        template_content = "ip,username,password,device_type,secret\n192.168.1.1,admin,admin,cisco_ios,enable_pwd"
+        template_path = os.path.join(self.script_dir, "配置模板.csv")
+        with open(template_path, "w", encoding="utf-8") as f:
+            f.write(template_content)
+        messagebox.showinfo("提示", f"配置模板已创建，请检查路径 {self.script_dir}")
 
+    def open_log_directory(self):
+        self.log_manager.check_log_directory()
+        log_dir = self.log_manager.log_folder
+        if os.name == "nt":
+            subprocess.Popen(f'explorer "{log_dir}"')
+        elif os.name == "posix":
+            subprocess.Popen(["xdg-open", log_dir])
+        else:
+            messagebox.showinfo("提示", "无法打开文件管理器，未知的操作系统类型")
 
-        self.设备标签页字典[设备['ip']]['text_widget'].insert(tk.END, f"设备：{设备['ip']}\n")
-        self.设备标签页字典[设备['ip']]['text_widget'].insert(tk.END, 结果 + "\n\n")
-
-
-def update_progress(进度条提示框, progress, bar, label):
-    # 更新进度条和百分比文本
-    bar["value"] = progress
-    label.config(text=f"{progress}%")
-    进度条提示框.update_idletasks()
-
-
-     
+# --------------------- 主程序入口 ---------------------
 if __name__ == "__main__":
-
-    # 创建主窗口并启动
-    主窗口 = tk.Tk()
-        # 初始化Netmiko的debug日志输出
-    # logging.getLogger("netmiko").setLevel(logging.DEBUG)
-    # logging.getLogger("netmiko").addHandler(Netmiko工具.DebugLogHandler(scrolledtext.ScrolledText(主窗口, wrap=tk.WORD)))
-
-    app = Netmiko工具(主窗口)
-    主窗口.mainloop()
+    root = tk.Tk()
+    app = NetmikoToolGUI(root)
+    root.mainloop()
