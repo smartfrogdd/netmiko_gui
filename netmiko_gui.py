@@ -845,7 +845,7 @@ ip,username,password,device_type,secret
             # 处理用户视图命令
             if 用户视图命令:
                 输出结果 += f"用户视图命令：\n---------------------\n{用户视图命令}\n---------------------\n"
-                
+                输出结果 += f"\n当前编码：{encoding}\n---------------------\n"
                 # H3C设备特殊处理
                 if 设备信息['device_type'] == "hp_comware":
                     输出结果 = self.h3c_superpwd(设备信息, 连接, 输出结果)
