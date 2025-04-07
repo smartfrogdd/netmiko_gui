@@ -40,8 +40,8 @@ venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidde
 
 ## 💡 使用说明
 1. 打包后执行 `dist/` 下的可执行文件
-2. 输入设备认证信息
-3. 选择操作命令
+2. 创建配置文件并导入
+3. 输入操作命令
 4. 查看返回结果
 
 ## 🖼️ 截图
