@@ -277,7 +277,7 @@ ip,username,password,device_type,secret
         self.notebook.add(self.frame_debug, text="调试页面")
 
         # 添加用于设置连接超时时间的标签和输入框
-        tk.Label(self.frame_debug, text="设置全局连接超时时间（秒）：").grid(row=0, column=0, pady=5, sticky=tk.W)
+        tk.Label(self.frame_debug, text="全局超时（秒）:").grid(row=0, column=0, pady=5, sticky=tk.W)
 
        
 
@@ -295,7 +295,7 @@ ip,username,password,device_type,secret
     
     
      #---------------------编码选择--------------------------------#
-        tk.Label(self.frame_debug, text="选择编码:").grid(row=1, column=0, pady=5, sticky=tk.W)
+        tk.Label(self.frame_debug, text="选择编码：").grid(row=1, column=0, pady=5, sticky=tk.W)
 
         # 编码选项
         encoding_list = ["utf-8", "gbk", "gb2312", "big5", "ascii"]
@@ -305,10 +305,10 @@ ip,username,password,device_type,secret
         self.编码下拉框.current(0)  # 默认选中第0个
         self.编码下拉框.grid(row=1, column=2, pady=5, sticky=tk.W)
 
-        btn = tk.Button(self.frame_debug, text="设置编码", command=self.set_encoding)
+        btn = tk.Button(self.frame_debug, text="确认", command=self.set_encoding)
         btn.grid(row=1, column=4, pady=5, sticky=tk.W)
 
-        self.label_result = tk.Label(self.frame_debug, text="当前编码: utf-8")
+        self.label_result = tk.Label(self.frame_debug, text="当前编码： utf-8")
         self.label_result.grid(row=3, column=0, pady=5, sticky=tk.W)
 
 
