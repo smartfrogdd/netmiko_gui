@@ -45,7 +45,7 @@ venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidde
 4. 查看返回结果
 
 ## 🖼️ 截图
-![demo](https://github.com/user-attachments/assets/e7120dec-37ff-4a76-9656-f6a8a01ed136)
-![image](https://github.com/user-attachments/assets/bc010e00-e4e6-4786-8b12-c005fd84ab24)
+![image](https://github.com/user-attachments/assets/7e3386a1-ab7f-4168-8dd1-028407c5a32a)
+
 
 
