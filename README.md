@@ -1,6 +1,6 @@
 ![image](https://github.com/user-attachments/assets/bc010e00-e4e6-4786-8b12-c005fd84ab24)
 
-windows:
+**windows:**
 
 python -m venv venv  
 pip install netmiko ttkthemes pillow pyinstaller
@@ -8,7 +8,8 @@ pip install netmiko ttkthemes pillow pyinstaller
 .\venv\Scripts\pyinstaller.exe -noconsole --icon=icon.png --add-data "icon.png;." netmiko_gui.py netmiko_gui.py
 .\dist\net
 
-linux:
+**linux:**
+<img width="1150" alt="6de258849c99ea91fca27154dce91e3" src="https://github.com/user-attachments/assets/e7120dec-37ff-4a76-9656-f6a8a01ed136" />
 
  python -m venv venv
  source venv/bin/activate
@@ -17,13 +18,13 @@ linux:
  pip install pillow netmiko pyinstaller
  
 
- fedora:
+** fedora:**
  sudo dnf install python3-tkinter
 
- debian:
+** debian:**
  sudo apt-get install python3-tk
 
- arch:
+** arch:**
  sudo pacman -S tk
 
 
