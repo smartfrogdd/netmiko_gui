@@ -1,35 +1,51 @@
+```markdown
+# Netmiko GUI 工具  
+**跨平台网络设备管理工具**  
+
+
+## 📦 安装指南
+### 所有平台通用
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+.\venv\Scripts\activate   # Windows
+```
+
+### Windows
+```batch
+pip install netmiko ttkthemes pillow pyinstaller
+```
+
+### Linux
+```bash
+# 依赖
+sudo apt-get install python3-tk  # Debian
+sudo dnf install python3-tkinter # Fedora
+sudo pacman -S tk                # Arch
+
+# Python包
+pip install pillow netmiko pyinstaller ttkthemes
+```
+
+## 🚀 打包命令
+### Windows
+```batch
+.\venv\Scripts\pyinstaller.exe -noconsole --icon=icon.png --add-data "icon.png;." netmiko_gui.py
+```
+
+### Linux/macOS
+```bash
+venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidden-import=PIL._tkinter_finder netmiko_gui.py
+```
+
+## 💡 使用说明
+1. 打包后执行 `dist/` 下的可执行文件
+2. 输入设备认证信息
+3. 选择操作命令
+4. 查看返回结果
+
+## 🖼️ 截图
+![demo](https://github.com/user-attachments/assets/e7120dec-37ff-4a76-9656-f6a8a01ed136)
 ![image](https://github.com/user-attachments/assets/bc010e00-e4e6-4786-8b12-c005fd84ab24)
 
-**windows:**
 
-python -m venv venv  
-pip install netmiko ttkthemes pillow pyinstaller
-打包：
-.\venv\Scripts\pyinstaller.exe -noconsole --icon=icon.png --add-data "icon.png;." netmiko_gui.py netmiko_gui.py
-.\dist\net
-
-**linux:**
-<img width="1150" alt="6de258849c99ea91fca27154dce91e3" src="https://github.com/user-attachments/assets/e7120dec-37ff-4a76-9656-f6a8a01ed136" />
-
- python -m venv venv
- source venv/bin/activate
- pip install 
-
- pip install pillow netmiko pyinstaller
- 
-
-** fedora:**
- sudo dnf install python3-tkinter
-
-** debian:**
- sudo apt-get install python3-tk
-
-** arch:**
- sudo pacman -S tk
-
-
- pip install ttkthemes
- 打包：
- venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidden-import=PIL._tkinter_finder netmiko_gui.py
-
-  
