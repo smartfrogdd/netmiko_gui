@@ -1,0 +1,192 @@
+设备：192.168.31.1
+执行时间：20250407--14:18:08
+用户视图命令：dis ip int br
+>dis ip int br
+Permission denied.
+
+192.168.31.1：执行完成,耗时:5.180216073989868
+设备：192.168.31.1
+执行时间：20250407--14:24:25
+用户视图命令：dis ip int br
+>dis ip int br
+Permission denied.
+
+192.168.31.1：执行完成,耗时:4.949343919754028
+设备：192.168.31.1
+执行时间：20250407--14:24:44
+用户视图命令：dis ip int br
+>dis ip int br
+Permission denied.
+
+192.168.31.1：执行完成,耗时:5.525604486465454
+设备：192.168.31.1
+执行时间：20250407--14:35:42
+用户视图命令：dis ip int br
+已成功进入特权模式，当前提示符：<Zveey_AC>
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:7.697263717651367
+设备：192.168.31.1
+执行时间：20250407--14:41:51
+用户视图命令：dis ip int br
+已成功进入特权模式，当前提示符：<Zveey_AC>
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:8.024938344955444
+设备：192.168.31.1
+执行时间：20250407--14:47:11
+用户视图命令：dis ip int br
+已成功进入特权模式，当前提示符：<Zveey_AC>
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:7.783712148666382
+设备：192.168.31.1
+执行时间：20250407--14:55:46
+用户视图命令：dis ip int br
+设备没有super密码，请检查配置文件是否错误当前提示符：<Zveey_AC>
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:7.496968746185303
+设备：192.168.31.1
+执行时间：20250407--14:56:51
+用户视图命令：dis ip int br
+设备没有设置super密码，请检查配置文件是否错误
+当前提示符：<Zveey_AC>
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:7.58682107925415
+设备：192.168.31.1
+执行时间：20250407--14:57:54
+用户视图命令：dis ip int br
+>super
+Password: 
+Password has not been set.
+
+192.168.31.1：执行完成,耗时:5.667285919189453
+设备：192.168.31.1
+执行时间：20250407--14:59:09
+用户视图命令：dis ip int br
+>dis ip int br
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              123
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  up       up       172.16.100.1    --
+
+192.168.31.1：执行完成,耗时:5.1714842319488525

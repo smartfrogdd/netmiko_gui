@@ -1,0 +1,100 @@
+设备：192.168.31.1
+执行时间：20250407--17:26:45
+用户视图命令：
+---------------------
+dis ip int br 
+
+
+dis ver
+---------------------
+提权成功
+当前提示符：<Zveey_AC>
+dis ip int br 
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              l0
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  down     down     172.16.100.1    --
+<Zveey_AC>
+<Zveey_AC>
+<Zveey_AC>dis ver
+              ^
+ % Ambiguous command found at '^' position.
+
+---------------------
+192.168.31.1：执行完成,耗时:10.150348901748657
+设备：192.168.31.1
+执行时间：20250407--17:28:13
+用户视图命令：
+---------------------
+dis ip int br 
+dis ver
+---------------------
+设备没有设置super密码，请检查配置文件是否错误
+dis ip int br 
+*down: administratively down
+(s): spoofing  (l): loopback
+Interface                Physical Protocol IP Address      Description 
+Dia1                     up       up(s)    --              --
+Dia2                     up       up(s)    --              --
+Dia3                     up       up(s)    --              --
+Dia4                     up       up(s)    --              --
+Dia5                     up       up(s)    --              --
+Dia6                     up       up(s)    --              --
+Dia7                     up       up(s)    --              --
+Dia8                     up       up(s)    --              --
+Dia9                     up       up(s)    --              --
+Dia10                    up       up(s)    --              --
+Dia11                    up       up       175.11.192.49   --
+Dia12                    up       up(s)    --              --
+GE1/0/11                 up       up       --              GigabitEtherne...
+Loop0                    up       up(s)    --              l0
+Loop1                    up       up(s)    --              --
+Vlan1                    up       up       192.168.31.1    --
+Vlan10                   up       up       10.176.4.114    YunZhuanXian
+Vlan100                  down     down     172.16.100.1    --
+<Zveey_AC>dis ver
+              ^
+ % Ambiguous command found at '^' position.
+
+---------------------
+192.168.31.1：执行完成,耗时:6.600435972213745
+设备：192.168.31.1
+执行时间：20250407--17:28:59
+配置视图命令：
+---------------------
+int lo 
+des l0
+---------------------
+设备没有设置super密码，请检查配置文件是否错误
+int lo 
+                 ^
+ % Incomplete command found at '^' position.
+[Zveey_AC]des l0
+          ^
+ % Unrecognized command found at '^' position.
+[Zveey_AC]return
+<Zveey_AC>
+save force
+Validating file. Please wait...
+Configuration is saved to device successfully.
+[Zveey_AC]
+
+---------------------
+192.168.31.1：执行完成,已自动对远端设备进行保存操作,耗时:21.76625919342041

@@ -1,0 +1,272 @@
+设备：192.168.10.1
+执行时间：20250407--13:53:45
+用户视图命令：show run
+% User doesn't have sufficient privilege to execute this command.
+
+
+192.168.10.1：执行完成,耗时:4.159332275390625
+设备：192.168.10.1
+执行时间：20250407--13:54:09
+用户视图命令：show run
+% User doesn't have sufficient privilege to execute this command.
+
+
+192.168.10.1：执行完成,耗时:4.479173183441162
+设备：192.168.10.1
+执行时间：20250407--13:57:42
+用户视图命令：show run
+
+Building configuration...
+Current configuration: 5145 bytes
+
+version S5310E_RGOS 12.5(4)B0702P4
+hostname WW-CoreSW-Ruijie-S5310
+!
+username admin password 7 $10$3e3$e6EnGoOL/43CTo+8$
+!
+cwmp
+ cpe inform interval 60
+!
+install switch 1 S5310-24SFP4XS-E
+install switch 2 S5310-24SFP4XS-E
+install 1/0 S5310-24SFP4XS-E
+install 2/0 S5310-24SFP4XS-E
+!
+sysmac d431.27c9.bd56
+!
+webmaster level 0 username admin secret 8 $1c$7eyy23uMQk$<hrzb:bn&$$,6z!b|4!|n6&6p!!$(&dx.,8`z2l:$
+enable service web-server https
+!
+nfpp
+!
+password policy printable-character-check
+password policy min-size 8
+password policy strong
+service password-encryption
+!
+redundancy
+!
+no storage lifetime set
+!
+no enable service snmp-agent
+ip ssh key-exchange dh_group_exchange_sha1 dh_group14_sha1 ecdh_sha2_nistp256 ecdh_sha2_nistp384 ecdh_sha2_nistp521
+ip ssh cipher-mode ctr gcm
+ip ssh hmac-algorithm sha2-256 sha2-512
+ip ssh version 2
+!
+login privilege log
+enable secret 8 $1c$7eyy23uMQk$<hrzb:bn&$$,6z!b|4!|n6&6p!!$(&dx.,8`z2l:$ 
+enable service ssh-server
+no enable service telnet-server
+!
+vlan 10
+ name QZJ-server
+!
+vlan 20
+ name WAF-proxy
+!
+vlan range 1-4,88,100,200,1010
+!
+interface GigabitEthernet 1/0/1
+ switchport access vlan 3
+!
+interface GigabitEthernet 1/0/2
+!
+interface GigabitEthernet 1/0/3
+!
+interface GigabitEthernet 1/0/4
+!
+interface GigabitEthernet 1/0/5
+!
+interface GigabitEthernet 1/0/6
+!
+interface GigabitEthernet 1/0/7
+!
+interface GigabitEthernet 1/0/8
+!
+interface GigabitEthernet 1/0/9
+!
+interface GigabitEthernet 1/0/10
+!
+interface GigabitEthernet 1/0/11
+ port-group 10
+!
+interface GigabitEthernet 1/0/12
+ port-group 11
+!
+interface GigabitEthernet 1/0/13
+ switchport access vlan 2
+!
+interface GigabitEthernet 1/0/14
+ switchport access vlan 3
+!
+interface GigabitEthernet 1/0/15
+ switchport access vlan 3
+!
+interface GigabitEthernet 1/0/16
+ port-group 2
+!
+interface GigabitEthernet 1/0/17
+!
+interface GigabitEthernet 1/0/18
+!
+interface GigabitEthernet 1/0/19
+ description to-WAF-M
+ switchport access vlan 20
+!
+interface GigabitEthernet 1/0/20
+ description to-wangzha
+ switchport access vlan 10
+!
+interface GigabitEthernet 1/0/21
+!
+interface GigabitEthernet 1/0/22
+!
+interface GigabitEthernet 1/0/23
+ port-group 1
+!
+interface GigabitEthernet 1/0/24
+ switchport access vlan 1010
+!
+interface GigabitEthernet 2/0/1
+!
+interface GigabitEthernet 2/0/2
+!
+interface GigabitEthernet 2/0/3
+!
+interface GigabitEthernet 2/0/4
+!
+interface GigabitEthernet 2/0/5
+!
+interface GigabitEthernet 2/0/6
+!
+interface GigabitEthernet 2/0/7
+!
+interface GigabitEthernet 2/0/8
+!
+interface GigabitEthernet 2/0/9
+!
+interface GigabitEthernet 2/0/10
+!
+interface GigabitEthernet 2/0/11
+ port-group 10
+!
+interface GigabitEthernet 2/0/12
+ port-group 11
+!
+interface GigabitEthernet 2/0/13
+ switchport access vlan 3
+!
+interface GigabitEthernet 2/0/14
+ switchport access vlan 3
+!
+interface GigabitEthernet 2/0/15
+ switchport access vlan 3
+!
+interface GigabitEthernet 2/0/16
+ port-group 2
+!
+interface GigabitEthernet 2/0/17
+!
+interface GigabitEthernet 2/0/18
+!
+interface GigabitEthernet 2/0/19
+ description to-WAF-S
+ switchport access vlan 20
+!
+interface GigabitEthernet 2/0/20
+!
+interface GigabitEthernet 2/0/21
+ switchport access vlan 88
+!
+interface GigabitEthernet 2/0/22
+ switchport access vlan 88
+!
+interface GigabitEthernet 2/0/23
+ port-group 1
+!
+interface GigabitEthernet 2/0/24
+!
+interface TenGigabitEthernet 1/0/25
+!
+interface TenGigabitEthernet 1/0/26
+!
+interface TenGigabitEthernet 1/0/27
+!
+interface TenGigabitEthernet 1/0/28
+!
+interface TenGigabitEthernet 2/0/25
+!
+interface TenGigabitEthernet 2/0/26
+!
+interface TenGigabitEthernet 2/0/27
+!
+interface TenGigabitEthernet 2/0/28
+!
+interface AggregatePort 1
+ switchport access vlan 10
+!
+interface AggregatePort 2
+ description To-DMZ-SW
+ switchport mode trunk
+ switchport trunk allowed vlan only 2-4094
+!
+interface AggregatePort 10
+ description TO-FW-M
+ switchport access vlan 200
+!
+interface AggregatePort 11
+ description TO-FW-S
+ switchport access vlan 200
+!
+interface VLAN 2
+ ip address 192.168.2.1 255.255.255.0
+!
+interface VLAN 3
+ ip address 192.168.3.1 255.255.255.0
+!
+interface VLAN 4
+ ip address 192.168.4.1 255.255.255.0
+!
+interface VLAN 10
+ ip address 192.168.10.1 255.255.255.0
+!
+interface VLAN 20
+ ip address 192.168.20.1 255.255.255.0
+!
+interface VLAN 88
+ ip address 192.168.88.1 255.255.255.0
+!
+interface VLAN 200
+ ip address 192.168.200.1 255.255.255.0
+!
+interface VLAN 1010
+ description caiwu
+ ip address 10.10.20.2 255.255.255.0
+!
+interface Mgmt 1/0
+!
+interface Mgmt 2/0
+ ip address mix dhcp
+ ip address mix 192.168.1.200 255.255.255.0
+!
+switch virtual domain 1
+!
+ip route 0.0.0.0 0.0.0.0 192.168.200.254
+ip route 192.168.150.0 255.255.255.0 10.10.20.1
+!
+snmp-server logging set-operation
+no snmp-server enable version v1
+no snmp-server enable version v2c
+snmp-server enable version v3
+snmp-server enable secret-dictionary-check
+!
+line console 0
+line vty 0 4
+ transport input ssh 
+ login local
+ password 7 $10$09b$up3Q1cRai/7GZnDV$
+!
+end
+
+192.168.10.1：执行完成,耗时:7.653274297714233
