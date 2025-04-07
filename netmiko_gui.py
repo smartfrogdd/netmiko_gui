@@ -670,46 +670,32 @@ ip,username,password,device_type,secret
         messagebox.showinfo("提示", f"配置模板已创建，请检查路径{script_dir}")
    
     def 运行工具(self, 用户视图命令, 配置视图命令):
-        # def update_label():
-        #     current_text = label.cget("text")
-        #     if current_text.endswith("...."):
-        #         new_text = "命令正在并发执行中，请稍等"
-        #     else:
-        #         new_text = current_text + "."
-        #     label.config(text=new_text)
-        #     new_window.after(500, update_label)  # 500毫秒后再次更新
-
-        # new_window = tk.Toplevel()
-        # new_window.title("提示")
-        # new_window.geometry("400x200")
-
-        # label = tk.Label(new_window, text="命令执行中，请稍等")
-        # label.pack(padx=20, pady=20)
-
-        # update_label()
-        进度条提示框 = tk.Tk()
-        进度条提示框.title("正在并发执行任务")
+        # 显示带有进度条的弹窗
+        进度条提示框 = tk.Toplevel(self.主窗口)
+        进度条提示框.title("任务执行中")
         进度条提示框.geometry("300x100")
+        # 获取屏幕的宽度和高度
+        screen_width = 进度条提示框.winfo_screenwidth()
+        screen_height = 进度条提示框.winfo_screenheight()
 
-        label = tk.Label(进度条提示框, text="0%", font=("Helvetica", 12))
-        label.pack(pady=10)
+        # 获取进度条提示框的宽度和高度
+        window_width = 300
+        window_height = 100
 
+        # 计算窗口位置，使其显示在屏幕正中心
+        x_pos = (screen_width - window_width) // 2
+        y_pos = (screen_height - window_height) // 2
+
+        # 设置窗口的位置
+        进度条提示框.geometry(f"{window_width}x{window_height}+{x_pos}+{y_pos}")
+
+        ttk.Label(进度条提示框, text="正在执行，请稍候...").pack(pady=5)
         bar = ttk.Progressbar(进度条提示框, orient="horizontal", length=200, mode="determinate")
-        bar.pack(pady=10)
-
-        # 计算每个更新所需的时间
-        total_time = 1  # 秒
-        update_interval = total_time / 100  # 每个百分比的时间
-        start_time = time.time()
-
-        # 模拟进度更新
-        for i in range(100):
-            elapsed_time = time.time() - start_time
-            remaining_time = max(0, total_time - elapsed_time)
-            update_progress(进度条提示框, i, bar, label)
-            进度条提示框.after(int(update_interval * 1000))  # 将秒转换为毫秒
-        
-        # 使用队列来保存每个子线程的结果
+        bar.pack(pady=5)
+        for i in range(101):
+            bar["value"] = i
+            进度条提示框.update_idletasks()
+            time.sleep(0.01)
         result_queue = queue.Queue()
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -722,7 +708,7 @@ ip,username,password,device_type,secret
                 self.显示运行结果(设备信息, 输出结果)
         # new_window.destroy()
         进度条提示框.destroy() 
-        messagebox.showinfo("任务完成", f"所有任务已完成，工具最多支持5个标签展示执行回显.\n更多设备详情请查看路径{self.log_folder}")
+        messagebox.showinfo("任务完成", f"任务执行完毕，详细日志请查看{self.log_folder}")
 
 
     def 运行用户视图命令(self):
