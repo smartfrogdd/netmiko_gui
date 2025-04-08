@@ -34,8 +34,8 @@ class Netmiko工具:
         icon_image = Image.open(icon_path)
         icon_image = icon_image.resize((64, 64))  # 调整图像大小
         icon_photo = ImageTk.PhotoImage(icon_image)
-        主窗口.geometry("1120x800")
-        主窗口.minsize(1120, 800)
+        主窗口.geometry("1280x800")
+        主窗口.minsize(1280, 800)
         # 设置窗口图标
         self.主窗口.iconphoto(True, icon_photo)
         # 使用 ThemedStyle 设置主题
@@ -187,15 +187,20 @@ class Netmiko工具:
         self.使用说明文本框 = scrolledtext.ScrolledText(self.frame_detail, wrap=tk.WORD)
         self.使用说明文本框.pack(pady=5, expand=True, fill="both")
         
-        使用说明 = """这是一个基于python的netmiko库制作的网络自动化工具，可以实现网络设备批量自动化运维的基本功能。
-使用说明：
-1.请将设备配置信息保存为CSV文件，格式如下：
+        使用说明 = """这是一个基于 Python 的 Netmiko 库开发的网络自动化工具，支持批量管理和运维网络设备。
+1. 配置文件格式
+
+请将设备配置信息保存为 CSV 文件，格式如下：
 ip,username,password,device_type,secret
-192.168.1.1,admin,admin,cisco_ios,,secret
-192.168.1.2,user,password,juniper_junos,secret\n192.168.1.3,admin,123456,cisco,secret
-(如有关键字未设置请在表格中留空)
-2.在导入配置文件时，出现错误提示大概率是配置文件格式问题。
-3.可用的设备类型包括且不限于以下种类：
+192.168.1.1,admin,admin,cisco_ios,secret
+192.168.1.2,user,password,juniper_junos,secret
+192.168.1.3,admin,123456,cisco_ios,secret
+* 如果某些字段没有值，请留空。
+* 确保文件格式正确，否则可能导致导入失败
+
+2. 支持的设备类型
+
+工具支持以下设备类型（但不限于）：
 - cisco_ios: Cisco IOS设备
 - juniper_junos: Juniper Junos设备
 - arista_eos: Arista EOS设备
@@ -205,12 +210,25 @@ ip,username,password,device_type,secret
 - ruijie_os: 锐捷设备
 - zte_zxros:中兴设备
 - linux: 普通linux设备
+* 注意：请在配置文件的 device_type 列中填写上述设备类型。如果需要使用 Telnet 连接，请在设备类型后添加 _telnet，例如：cisco_ios_telnet。
 
-[请在配置文件的device_type 列中选择上述设备类型之一填写。]
-4.在填写配置文件时，请注意区分设备类型，确保与实际设备一致。
-5.默认使用SSH连接。如需使用Telnet连接，在设备类型后增加"_telnet"，如：cisco_ios_telnet。
-6.使用debug功能可以实时看到工具执行命令时后台与所有设备的所有交互过程
-7.遇到ssh认证时间较长的设备，可以在设置页调整整体超时时间，否则可能会因为ssh认证超时导致连接失败"""
+3. 功能说明
+
+* 批量命令执行：支持用户视图命令和配置视图命令的批量执行。
+* 日志记录：自动保存每台设备的执行日志，便于后续查看。
+* Debug 模式：开启后可实时查看工具与设备的交互过程。
+
+4. 常见问题
+
+* 配置文件格式错误：请确保 CSV 文件格式正确，字段完整。
+* SSH 认证超时：如果设备响应较慢，可在设置页面调整全局超时时间。
+
+5. 注意事项
+
+* 默认使用 SSH 连接。
+* 执行配置命令前请仔细核对，操作不可撤销。"""
+
+
         self.使用说明文本框.insert(tk.END,使用说明)
         self.使用说明文本框.config(state=tk.DISABLED)
 
@@ -670,47 +688,91 @@ ip,username,password,device_type,secret
         messagebox.showinfo("提示", f"配置模板已创建，请检查路径{script_dir}")
    
     def 运行工具(self, 用户视图命令, 配置视图命令):
-        # 显示带有进度条的弹窗
+        print(f"线程ID: {threading.get_ident()} ")
+        # 创建进度条弹窗
         进度条提示框 = tk.Toplevel(self.主窗口)
         进度条提示框.title("任务执行中")
-        进度条提示框.geometry("300x100")
-        # 获取屏幕的宽度和高度
-        screen_width = 进度条提示框.winfo_screenwidth()
-        screen_height = 进度条提示框.winfo_screenheight()
-
-        # 获取进度条提示框的宽度和高度
-        window_width = 300
-        window_height = 100
-
-        # 计算窗口位置，使其显示在屏幕正中心
-        x_pos = (screen_width - window_width) // 2
-        y_pos = (screen_height - window_height) // 2
-
-        # 设置窗口的位置
+        
+        # 设置窗口位置居中
+        window_width, window_height = 300, 120
+        x_pos = (进度条提示框.winfo_screenwidth() - window_width) // 2
+        y_pos = (进度条提示框.winfo_screenheight() - window_height) // 2
         进度条提示框.geometry(f"{window_width}x{window_height}+{x_pos}+{y_pos}")
-
+        进度条提示框.protocol("WM_DELETE_WINDOW", lambda: None)
+        
+        # 添加控件
         ttk.Label(进度条提示框, text="正在执行，请稍候...").pack(pady=5)
+        self.任务计数器 = ttk.Label(进度条提示框, text="0/0 已完成")
+        self.任务计数器.pack()
+        
+        # 创建进度条
         bar = ttk.Progressbar(进度条提示框, orient="horizontal", length=200, mode="determinate")
         bar.pack(pady=5)
-        for i in range(101):
-            bar["value"] = i
-            进度条提示框.update_idletasks()
-            time.sleep(0.01)
+        进度条提示框.update_idletasks()
+        
+        # 平滑动画相关变量
+        self.当前显示进度 = 0  # 当前显示的值
+        self.目标进度 = 0     # 实际应该达到的值
+        self.动画进行中 = False
+        
         result_queue = queue.Queue()
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # 使用 executor.submit() 提交每个任务
-            futures = [executor.submit(self.执行命令, 设备, 用户视图命令, 配置视图命令, result_queue) for 设备 in self.设备列表]
-
-            # 使用 as_completed 等待所有任务完成
-            for future in concurrent.futures.as_completed(futures):
-                设备信息, 输出结果 = future.result()
-                self.显示运行结果(设备信息, 输出结果)
-        # new_window.destroy()
-        进度条提示框.destroy() 
-        messagebox.showinfo("任务完成", f"任务执行完毕，详细日志请查看{self.log_folder}")
-
-
+        total_devices = len(self.设备列表)
+        completed = 0
+        self.任务计数器.config(text=f"0/{total_devices} 已完成")
+        
+        def 更新进度动画():
+            if self.当前显示进度 < self.目标进度:
+                # 计算增量 - 使用缓动函数使动画更自然
+                增量 = max(1, (self.目标进度 - self.当前显示进度) * 0.3)  # 0.3是平滑系数，可调整
+                self.当前显示进度 = min(self.当前显示进度 + 增量, self.目标进度)
+                bar["value"] = self.当前显示进度
+                进度条提示框.update_idletasks()
+                进度条提示框.after(30, 更新进度动画)  # 每30毫秒更新一次
+            else:
+                self.动画进行中 = False
+        
+        def 设置新进度(新值):
+            self.目标进度 = 新值
+            if not self.动画进行中:
+                self.动画进行中 = True
+                更新进度动画()
+        
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {
+                    executor.submit(
+                        self.执行命令, 
+                        设备, 
+                        用户视图命令, 
+                        配置视图命令, 
+                        result_queue
+                    ): 设备 for 设备 in self.设备列表
+                }
+                
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        设备信息, 输出结果 = future.result()
+                        self.显示运行结果(设备信息, 输出结果)
+                    except Exception as e:
+                        设备 = futures[future]
+                        self.显示运行结果(设备, f"执行出错: {str(e)}")
+                    
+                    completed += 1
+                    # 计算实际进度百分比
+                    实际进度 = int((completed / total_devices) * 100)
+                    self.任务计数器.config(text=f"{completed}/{total_devices} ")
+                    设置新进度(实际进度)  # 使用平滑动画更新进度
+        
+            # 等待最后的动画完成
+            while self.动画进行中:
+                进度条提示框.update()
+                time.sleep(0.03)
+        
+        except Exception as e:
+            messagebox.showerror("错误", f"执行过程中发生错误: {str(e)}")
+        finally:
+            进度条提示框.destroy()
+            messagebox.showinfo("任务完成", f"任务执行完毕，共完成 {completed}/{total_devices} 个设备，详细日志请查看{self.log_folder}")
     def 运行用户视图命令(self):
         
         if self.设备列表 == []:
@@ -814,7 +876,22 @@ ip,username,password,device_type,secret
     def 执行命令(self, 设备信息, 用户视图命令, 配置视图命令, result_queue):
         start_time = time.time()
         输出结果 = ""  # 在函数开头初始化输出变量
+    # 获取线程信息
+        thread_id = threading.get_ident()
+        thread_name = threading.current_thread().name
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # 精确到毫秒
         
+        # 详细日志输出
+        log_msg = (
+            f"[{timestamp}]\n[线程ID: {thread_id}]\n[线程名: {thread_name}]\n"
+            f"▶ 开始执行任务: {设备信息['ip']}\n"
+            f"▶ 当前编码：{encoding}\n"
+            "----------------------------------------\n"
+        )
+        print(log_msg)
+        输出结果 += log_msg
+
+                
         try:
             # 设备类型自动检测
             if 设备信息.get('device_type') == 'autodetect':
@@ -831,8 +908,8 @@ ip,username,password,device_type,secret
             
             # 处理用户视图命令
             if 用户视图命令:
-                输出结果 += f"用户视图命令：\n---------------------\n{用户视图命令}\n---------------------\n"
-                输出结果 += f"\n当前编码：{encoding}\n---------------------\n"
+                # 输出结果 += f"用户视图命令：\n----------------------------------------\n{用户视图命令}\n----------------------------------------\n"
+                
                 # H3C设备特殊处理
                 if 设备信息['device_type'] == "hp_comware":
                     输出结果 = self.h3c_superpwd(设备信息, 连接, 输出结果)
@@ -841,11 +918,11 @@ ip,username,password,device_type,secret
                 
                 end_time = time.time()
                 total_time = end_time - start_time
-                输出结果 += f"\n---------------------\n{设备信息['ip']}：执行完成,耗时:" + str(total_time)
+                输出结果 += f"\n----------------------------------------\n▶{设备信息['ip']}：任务执行完成,耗时:" + str(total_time)
 
             # 处理配置视图命令
             if 配置视图命令:
-                输出结果 += f"配置视图命令：\n---------------------\n{配置视图命令}\n---------------------\n"
+                # 输出结果 += f"配置视图命令：\n----------------------------------------\n{配置视图命令}\n----------------------------------------\n"
                 
                 # H3C设备特殊处理
                 if 设备信息['device_type'] == "hp_comware":
@@ -861,7 +938,7 @@ ip,username,password,device_type,secret
                 
                 end_time = time.time()
                 total_time = end_time - start_time
-                输出结果 += f"\n---------------------\n{设备信息['ip']}：执行完成,已自动对远端设备进行保存操作,耗时:" + str(total_time)
+                输出结果 += f"\n----------------------------------------\n▶{设备信息['ip']}：任务执行完成,已自动对远端设备进行保存操作,耗时:" + str(total_time)
 
             # 日志记录
             current_date = datetime.now().strftime("%Y%m%d_%H")
