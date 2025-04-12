@@ -35,7 +35,15 @@ pip install pillow netmiko pyinstaller ttkthemes
 
 ### Linux/macOS
 ```bash
-venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidden-import=PIL._tkinter_finder netmiko_gui.py
+pyinstaller \
+--onefile \
+--windowed \
+--name "NetmikoGUI" \
+--icon="icon.ico" \
+--add-data "server_app.py:." \
+--hidden-import="tkinter" \
+--hidden-import="scrolledtext" \
+netmiko_gui.py
 ```
 
 ## 💡 使用说明
@@ -46,9 +54,6 @@ venv/bin/pyinstaller --noconsole --icon=icon.png --add-data "icon.png:." --hidde
 
 ## 🖼️ 截图
 ![image](https://github.com/user-attachments/assets/7e3386a1-ab7f-4168-8dd1-028407c5a32a)
-![图片](https://github.com/user-attachments/assets/413ad3d3-61af-439f-86e5-0e165ab0d1e9)
-![图片](https://github.com/user-attachments/assets/fea264ce-f2b5-4a54-a638-8348ad9001af)
-
 
 
 
