@@ -29,13 +29,13 @@ pip install pillow netmiko pyinstaller ttkthemes
 
 ## 🚀 打包命令
 ### Windows
-```batch
-.\venv\Scripts\pyinstaller.exe -noconsole --icon=icon.png --add-data "icon.png;." netmiko_gui.py
+```bash
+pyinstaller -noconsole --name "Netmiko_gui_" --icon="icon.ico" --add-data "server_app.py:." netmiko_gui.py
 ```
-
 ### Linux/macOS
 ```bash
 pyinstaller \
+-noconsole
 --name "Netmiko_gui_" \
 --icon="icon.ico" \
 --add-data "server_app.py:." \
