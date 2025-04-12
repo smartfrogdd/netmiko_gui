@@ -19,7 +19,7 @@ import time
 from PIL import Image, ImageTk
 import subprocess
 from netmiko.ssh_dispatcher import CLASS_MAPPER
-
+from server_app import ServerApp
 encoding="utf-8"
 class Netmiko工具:
 
@@ -28,22 +28,20 @@ class Netmiko工具:
         self.主窗口 = 主窗口
         self.主窗口.title("AutoNetPy")
         self.主窗口.resizable(True, True)
-        # 使用 Pillow 加载 PNG 图像
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(script_dir, "icon.png")
-        icon_image = Image.open(icon_path)
-        icon_image = icon_image.resize((64, 64))  # 调整图像大小
-        icon_photo = ImageTk.PhotoImage(icon_image)
+        
+        
+
         主窗口.geometry("1280x800")
         主窗口.minsize(1280, 800)
         # 设置窗口图标
-        self.主窗口.iconphoto(True, icon_photo)
+        
         # 使用 ThemedStyle 设置主题
         self.style = ThemedStyle(self.主窗口)
         self.style.set_theme("arc")
         default_font = ('Consolas',10)
     
         # 添加日志路径
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         # 设置日志目录在脚本所在目录下
         self.log_folder = os.path.join(script_dir, "日志")
         self.检查日志()
@@ -66,7 +64,11 @@ class Netmiko工具:
         self.frame_cmd.grid_rowconfigure(0, weight=0, minsize=10)  # 30 是固定的高度，可以根据需要调整
 
         # 创建 Label 控件，确保顶部对齐
-        tk.Label(self.frame_cmd, text="填写用户视图命令：").grid(row=0, column=0, sticky="nw", padx=5, pady=5)
+        ttk.Label(
+            self.frame_cmd,
+            text="填写用户视图命令：",
+            style="Uniform.TLabel"  
+        ).grid(row=0, column=0, sticky="nw", padx=5, pady=5)  
         # Text 输入框，紧贴 Label，确保只在垂直方向扩展
         self.用户视图命令文本 = scrolledtext.ScrolledText(self.frame_cmd, height=4, width=50, wrap=tk.WORD)
         self.用户视图命令文本.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=0, pady=0)
@@ -102,7 +104,11 @@ class Netmiko工具:
 
         # 绑定焦点离开事件
         self.用户视图命令文本.bind("<FocusOut>", on_focus_out)
-        tk.Label(self.frame_cmd, text="填写配置/系统视图命令：").grid(row=2, column=0, pady=5, sticky=tk.W)
+        ttk.Label(
+            self.frame_cmd,
+            text="填写配置/系统视图命令：",
+            style="Uniform.TLabel"  # 应用统一标签样式
+        ).grid(row=2, column=0, pady=5, sticky=tk.W)  # 保持原有布局参数
         # 创建配置视图命令文本框
         # 设置文本框
         self.配置视图命令文本 = scrolledtext.ScrolledText(self.frame_cmd, height=4, width=50, wrap=tk.WORD)
@@ -134,10 +140,37 @@ class Netmiko工具:
                 self.配置视图命令文本.config(fg="grey")  # 修改文本颜色为灰色
 
         self.配置视图命令文本.bind("<FocusOut>", on_focus_out_config_mode)
-        tk.Button(self.frame_cmd, text="运行用户视图命令", command=self.运行用户视图命令).grid(row=4, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="运行配置视图命令", command=self.运行配置视图命令).grid(row=4, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="清空执行结果", command=self.清空执行结果).grid(row=4, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
-        tk.Button(self.frame_cmd, text="打开日志目录", command=self.打开日志目录).grid(row=5, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
+        # 运行用户视图命令按钮
+        ttk.Button(
+            self.frame_cmd,
+            text="运行用户视图命令",
+            command=self.运行用户视图命令,
+            style="Uniform.TButton"
+        ).grid(row=4, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
+
+        # 运行配置视图命令按钮
+        ttk.Button(
+            self.frame_cmd,
+            text="运行配置视图命令",
+            command=self.运行配置视图命令,
+            style="Uniform.TButton"
+        ).grid(row=4, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
+
+        # 清空执行结果按钮
+        ttk.Button(
+            self.frame_cmd,
+            text="清空执行结果",
+            command=self.清空执行结果,
+            style="Uniform.TButton"
+        ).grid(row=4, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
+
+        # 打开日志目录按钮
+        ttk.Button(
+            self.frame_cmd,
+            text="打开日志目录",
+            command=self.打开日志目录,
+            style="Uniform.TButton"
+        ).grid(row=5, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
 
 # 创建 notebook 用于显示运行结果
         self.notebook_results = ttk.Notebook(self.frame_cmd)
@@ -149,7 +182,12 @@ class Netmiko工具:
         self.设备标签页字典 = {}  # 存储每台设备对应的标签页
 
         # 创建DEBUG开关按钮
-        self.debug_button = tk.Button(self.frame_cmd, text="开启Debug日志", command=self.toggle_debug_logging)
+        self.debug_button = ttk.Button(
+            self.frame_cmd,
+            text="开启Debug日志",
+            command=self.toggle_debug_logging,
+            style="Uniform.TButton"
+        )
         self.debug_button.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
 
         # 创建子标签页用于展示debug日志输出的内容
@@ -161,8 +199,16 @@ class Netmiko工具:
         default_debug_text="开启debug功能后会在此处显示详细日志。"
         self.debug_log_text.insert(tk.END, default_debug_text)
         self.debug_log_text.pack(expand=True, fill="both")
-        self.clear_button = tk.Button(self.frame_cmd, text="清空Debug日志", command=self.clear_debug_log_text)
+
+        # self.clear_button = tk.Button(self.frame_cmd, text="清空Debug日志", command=self.clear_debug_log_text)
+        self.clear_button = ttk.Button(
+            self.frame_cmd,
+            text="清空Debug日志",
+            command=self.clear_debug_log_text,
+            style="Uniform.TButton"
+        )
         self.clear_button.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
+
         # 设置Netmiko的debug日志输出到GUI中
         self.enable_debug_logging = False        
         self.debug_log_text.grid(row=0, column=0, sticky="nsew")
@@ -238,10 +284,26 @@ ip,username,password,device_type,secret
         self.frame_config = ttk.Frame(self.notebook)
         self.notebook.add(self.frame_config, text="导入配置文件")
 
-        tk.Label(self.frame_config, text="选择配置文件 (CSV格式)：").grid(row=1, column=0, pady=10)
+        ttk.Label(
+            self.frame_config,
+            text="选择配置文件 (CSV格式)：",
+            style="Uniform.TLabel"  # 使用统一的标签样式
+        ).grid(row=1, column=0, pady=10, sticky="e")  # 添加sticky="w"保持左对齐
 
-        tk.Button(self.frame_config, text="导入配置文件", command=self.导入配置文件).grid(row=1, column=1, pady=10)
-        self.btn_generate_template = tk.Button(self.frame_config, text="创建配置模板", command=self.打开配置模板目录)
+        ttk.Button(
+            self.frame_config,
+            text="导入配置文件",
+            command=self.导入配置文件,
+            style="Uniform.TButton",
+            width=20
+        ).grid(row=1, column=1, pady=10)
+        self.btn_generate_template = ttk.Button(
+            self.frame_config,
+            text="创建配置模板",
+            command=self.打开配置模板目录,
+            style="Uniform.TButton",
+            width=20  # 保持与其他按钮相同的宽度
+        )
         self.btn_generate_template.grid(row=2, column=1, pady=10)
 
         # 创建Treeview来展示导入的配置信息
@@ -264,22 +326,25 @@ ip,username,password,device_type,secret
         self.frame_config.rowconfigure(3, weight=1)  # 第三行
         self.frame_config.columnconfigure(0, weight=1)  # 第一列
         self.frame_config.columnconfigure(1, weight=1)  # 第二列
-       
-
-        
-
-
-
+        # 创建滚动条
         self.notebook.pack(padx=10, pady=10, fill="both", expand=True)
         self.max_tab_count = 5
-        # 初始化设备列表
+
+
+
+        # ---------------------新增测试页------------------------------
+         # 初始化设备列表
         self.设备列表 = []
-        # 新增标签页
         self.frame_test = ttk.Frame(self.notebook)
         self.notebook.add(self.frame_test, text="连接测试")
 
         # 添加按钮
-        tk.Button(self.frame_test, text="测试连接", command=self.测试连接).pack(pady=10)
+        ttk.Button(
+            self.frame_test, 
+            text="测试连接", 
+            command=self.测试连接,
+            style="Uniform.TButton"
+        ).pack(pady=10)
 
         # 创建显示连接测试结果的文本框
         self.连接测试结果文本 = scrolledtext.ScrolledText(self.frame_test, wrap=tk.WORD)
@@ -289,85 +354,178 @@ ip,username,password,device_type,secret
 
 
 
-       
-        # 创建调试页面的新标签页
+        # ---------------------新增调试页------------------------------
         self.frame_debug = ttk.Frame(self.notebook)
         self.notebook.add(self.frame_debug, text="调试页面")
 
-        # 添加用于设置连接超时时间的标签和输入框
-        tk.Label(self.frame_debug, text="全局超时（秒）:").grid(row=0, column=0, pady=5, sticky=tk.W)
-
-       
-
-        # 使用 ttk.Entry
-        self.timeout_entry = ttk.Entry(self.frame_debug)
-        self.timeout_entry.insert(tk.END, "10.0")  # 设置默认值为10秒
-        self.timeout_entry.grid(row=0, column=2, pady=5)
-                # 使用 Style 对象配置样式，设置为斜体灰色
+        # 创建统一样式
         style = ThemedStyle(self.frame_debug)
-        style.configure("TEntry.Default.TEntry", font=("Arial", 10, "italic"), foreground="grey")
+        style.configure("Uniform.TLabel", font=("Arial", 10))
+        style.configure("Uniform.TEntry", font=("Arial", 10, "italic"), foreground="grey")
+        style.configure("Uniform.TButton", font=("Arial", 10))
 
-        # 添加确认用户输入超时时间的按钮
-        tk.Button(self.frame_debug, text="确认", command=self.confirm_timeout).grid(row=0, column=4, columnspan=1, pady=1)
-        self.global_timeout = 10.0  # 默认全局连接超时时间为10秒
-    
-    
-     #---------------------编码选择--------------------------------#
-        tk.Label(self.frame_debug, text="选择编码：").grid(row=1, column=0, pady=5, sticky=tk.W)
+        pad_opts = {"padx": 5, "pady": 5, "sticky": tk.W}
 
-        # 编码选项
-        encoding_list = ["utf-8", "gbk", "gb2312", "big5", "ascii"]
-
-        # 创建下拉选择框
-        self.编码下拉框 = ttk.Combobox(self.frame_debug, values=encoding_list)
-        self.编码下拉框.current(0)  # 默认选中第0个
-        self.编码下拉框.grid(row=1, column=2, pady=5, sticky=tk.W)
-
-        btn = tk.Button(self.frame_debug, text="确认", command=self.set_encoding)
-        btn.grid(row=1, column=4, pady=5, sticky=tk.W)
-
-        self.label_result = tk.Label(self.frame_debug, text="当前编码： utf-8")
-        self.label_result.grid(row=3, column=0, pady=5, sticky=tk.W)
-
-
-
-
-
-
-
-       # 添加关于页面的内容
-        self.frame_info = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_info, text="关于")
+        # ---------- 全局超时设置 ----------
+        ttk.Label(self.frame_debug, text="全局超时（秒）:", style="Uniform.TLabel").grid(row=0, column=0, **pad_opts)
 
         
-        tk.Label(self.frame_info, text="AutoNetPy ").grid(row=0, column=0, pady=10, sticky=tk.W)
+        timeout_options = ["5", "10", "15", "20", "30", "60"]
+        self.timeout_combobox = ttk.Combobox(self.frame_debug, values=timeout_options, state="readonly", style="Uniform.TEntry")
+        self.timeout_combobox.current(1)  # 默认选中 "10"
+        self.timeout_combobox.grid(row=0, column=1, **pad_opts)
+
+        ttk.Button(
+            self.frame_debug,
+            text="确认",
+            command=self.confirm_timeout,
+            style="Uniform.TButton"
+        ).grid(row=0, column=2, **pad_opts)
+
+        self.global_timeout = 10.0  # 默认全局连接超时
+
+        # ---------- 编码选择 ----------
+        ttk.Label(self.frame_debug, text="选择编码：", style="Uniform.TLabel").grid(row=1, column=0, **pad_opts)
+
+        self.编码下拉框 = ttk.Combobox(self.frame_debug, values=["utf-8", "gbk", "gb2312", "big5", "ascii"], state="readonly", style="Uniform.TEntry")
+        self.编码下拉框.current(0)
+        self.编码下拉框.grid(row=1, column=1, **pad_opts)
+
+        ttk.Button(
+            self.frame_debug,
+            text="确认",
+            command=self.set_encoding,
+            style="Uniform.TButton"
+        ).grid(row=1, column=2, **pad_opts)
+
+        # ---------- 当前编码显示 ----------
+        self.label_result = ttk.Label(self.frame_debug, text="当前编码： utf-8", style="Uniform.TLabel")
+        self.label_result.grid(row=2, column=0, columnspan=3, **pad_opts)
 
 
-        # ASCII图片
-        ascii_art = """
-　    ∧＿ ∧
-　  (   ´  ∀ ` )
-　  (　　     )
-　  ｜   ｜ ｜
-　  (_＿  )＿)
 
 
-"""
-
-        tk.Label(self.frame_info, text=ascii_art).grid(row=4, column=0, pady=10, sticky=tk.W)
-
-        self.notebook.select(1) 
-        # 在"关于"页面上显示设备类型列表
-        self.create_device_table(self.frame_info)
 
 
-    def create_device_table(self, frame):
-        # 设置页面的标题
+    #-----------------------工具页面------------------------------------------
+
+        
+        self.frame_info = ttk.Frame(self.notebook, padding=20)
+        self.notebook.add(self.frame_info, text="工具")
+
+        # 配置网格布局权重
+        self.frame_info.columnconfigure(0, weight=1)
+        self.frame_info.rowconfigure(1, weight=1)  # 主要内容区可扩展
+
+        # ==================== 标题部分 ====================
+        header_frame = ttk.Frame(self.frame_info)
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 20))
 
 
-        # 按钮用于显示设备类型表格
-        btn_show_table = tk.Button(frame, text="查看工具支持的设备类型", command=self.show_device_table)
-        btn_show_table.grid(row=0, column=1, pady=5, padx=5, sticky=tk.W)
+
+
+        # ==================== 主要内容区 ====================
+        content_frame = ttk.Frame(self.frame_info)
+        content_frame.grid(row=1, column=0, sticky="nsew")
+
+
+
+
+
+     
+
+
+
+        # ==================== 居中垂直按钮栏 ====================
+        button_frame = ttk.Frame(self.frame_info)
+        button_frame.grid(row=1, column=0, sticky="nsew", pady=20)  # 使用中间行，增加垂直间距
+
+        # 配置网格权重使内容居中
+        self.frame_info.rowconfigure(1, weight=1)  # 使中间行可扩展
+        self.frame_info.columnconfigure(0, weight=1)
+
+        # 统一按钮样式
+        button_style = ttk.Style()
+        button_style.configure("Vertical.TButton", 
+            padding=10,
+            font=("Segoe UI", 10, "bold"),
+            width=25,
+            anchor="center",
+            relief="raised"
+        )
+
+        # 按钮交互效果
+        button_style.map("Vertical.TButton",
+            foreground=[('pressed', 'white'), ('active', 'white')],
+            background=[('pressed', '#2c3e50'), ('active', '#3498db')],
+            relief=[('pressed', 'sunken'), ('!pressed', 'raised')]
+        )
+
+        # 按钮容器 - 垂直排列
+        btn_container = ttk.Frame(button_frame)
+        btn_container.pack(expand=True, pady=20)
+
+        # 查看设备按钮
+        btn_show_table = ttk.Button(
+            btn_container,
+            text="查看支持的设备类型",
+            command=self.show_device_table,
+            style="Vertical.TButton"
+        )
+        btn_show_table.pack(pady=10, ipady=5, fill=tk.X)  # 填充X方向，增加垂直间距
+
+        # 服务器按钮
+        self.open_server_btn = ttk.Button(
+            btn_container,
+            text="本地服务工具",
+            command=self.open_server_app,
+            style="Vertical.TButton"
+        )
+        self.open_server_btn.pack(pady=10, ipady=5, fill=tk.X)
+
+        # 如果需要添加更多按钮
+        # self.another_btn = ttk.Button(...)
+        # self.another_btn.pack(pady=10, ipady=5, fill=tk.X)
+
+        self.notebook.select(1)  # 默认选中第二个标签页
+
+        # 用于保存 ServerApp 窗口的引用
+        self.server_app_window = None
+        self.server_app = None
+    def open_server_app(self):
+        # 如果窗口已经存在，则将其提到前面
+        if hasattr(self, 'server_app_window') and self.server_app_window:
+            try:
+                self.server_app_window.lift()
+                return
+            except tk.TclError:
+                # 如果窗口已被关闭，则继续创建新窗口
+                pass
+        
+        # 创建一个新的 Toplevel 窗口
+        self.server_app_window = tk.Toplevel(self.主窗口)
+        self.server_app_window.title("本地服务工具")
+        
+        # 创建 ServerApp 实例
+        self.server_app = ServerApp(self.server_app_window)
+        
+        # 当 ServerApp 窗口关闭时清除引用
+        self.server_app_window.protocol("WM_DELETE_WINDOW", self.on_server_app_close)
+    
+    def on_server_app_close(self):
+        # 关闭 ServerApp 并清除引用
+        if self.server_app:
+            self.server_app.on_close()
+        self.server_app_window.destroy()
+        self.server_app_window = None
+        self.server_app = None
+
+
+
+
+
+
+
 
     def show_device_table(self):
         # 获取 Netmiko 的设备类型数据
@@ -448,7 +606,7 @@ ip,username,password,device_type,secret
     def confirm_timeout(self):
         try:
             # 获取用户输入的超时时间
-            timeout_value = float(self.timeout_entry.get())
+            timeout_value = float(self.timeout_combobox.get())
 
             # 弹出确认对话框
             confirm_result = messagebox.askyesno("确认", f"您确定要修改全局连接超时时间为 {timeout_value} 秒吗？\n这可能会影响到其他操作。")
