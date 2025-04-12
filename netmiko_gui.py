@@ -456,7 +456,7 @@ ip,username,password,device_type,secret
 
         # 按钮交互效果
         button_style.map("Vertical.TButton",
-            foreground=[('pressed', 'white'), ('active', 'white')],
+            foreground=[('pressed', 'lightblue'), ('active', 'lightblue')],
             background=[('pressed', '#2c3e50'), ('active', '#3498db')],
             relief=[('pressed', 'sunken'), ('!pressed', 'raised')]
         )
@@ -474,7 +474,7 @@ ip,username,password,device_type,secret
         )
         btn_show_table.pack(pady=10, ipady=5, fill=tk.X)  # 填充X方向，增加垂直间距
 
-        # 服务器按钮
+        # 服务工具按钮
         self.open_server_btn = ttk.Button(
             btn_container,
             text="本地服务工具",
@@ -482,16 +482,14 @@ ip,username,password,device_type,secret
             style="Vertical.TButton"
         )
         self.open_server_btn.pack(pady=10, ipady=5, fill=tk.X)
-
-        # 如果需要添加更多按钮
-        # self.another_btn = ttk.Button(...)
-        # self.another_btn.pack(pady=10, ipady=5, fill=tk.X)
-
-        self.notebook.select(1)  # 默认选中第二个标签页
-
         # 用于保存 ServerApp 窗口的引用
         self.server_app_window = None
         self.server_app = None
+
+
+        self.notebook.select(1)  # 默认选中第二个标签页
+
+
     def open_server_app(self):
         # 如果窗口已经存在，则将其提到前面
         if hasattr(self, 'server_app_window') and self.server_app_window:

@@ -66,8 +66,8 @@ class ServerApp:
         self.tftp_btn = tk.Button(ctrl_row, text="启动 TFTP 服务", command=self.toggle_tftp, width=15)
         self.tftp_btn.pack(side="left", padx=5)
         
-        self.tftp_status_btn = tk.Label(ctrl_row, text="🔴 未运行", bg="red", fg="white", width=12, relief="sunken")
-        self.tftp_status_btn.pack(side="left", padx=5)
+        
+        
 
         # --- FTP 区域 ---
         ftp_frame = tk.LabelFrame(main_frame, text="FTP 设置", padx=10, pady=10, bg="#f8f8f8")
@@ -176,20 +176,17 @@ class ServerApp:
             self.log_text.config(state="disabled")
 
     def toggle_tftp(self):
-        if self.tftp_started:
-            self.stop_tftp()
-        else:
             if not self.validate_port(self.tftp_port_entry.get()):
                 messagebox.showerror("错误", "请输入有效的端口号(1-65535)")
                 return
             self.start_tftp()
-
     def start_tftp(self):
         try:
             port = int(self.tftp_port_entry.get())
             self.log(f"正在启动 TFTP 服务，端口: {port}，目录: {self.tftp_dir}")
             
             def run_tftp_server():
+            
                 try:
                     server = TftpServer(self.tftp_dir)
                     server.listen("0.0.0.0", port)
@@ -197,6 +194,7 @@ class ServerApp:
                     self.log(f"权限不足，不能监听端口 {port}", "error")
                 except Exception as e:
                     self.log(f"TFTP 启动失败: {e}", "error")
+
                 finally:
                     self.tftp_started = False
                     self.update_tftp_status()
@@ -210,15 +208,15 @@ class ServerApp:
             self.log(f"启动 TFTP 服务时出错: {e}", "error")
 
     def stop_tftp(self):
-        self.log("tftp无法手动停止，请关闭服务工具...")
+        self.log("tftp无法手动停止，请关闭程序")
 
 
     def update_tftp_status(self):
         if self.tftp_started:
-            self.tftp_status_btn.config(text="🟢 运行中", bg="green")
-            self.tftp_btn.config(text="停止 TFTP 服务")
+            
+            self.tftp_btn.config(text="已启动")
         else:
-            self.tftp_status_btn.config(text="🔴 未运行", bg="red")
+            
             self.tftp_btn.config(text="启动 TFTP 服务")
 
     def toggle_ftp(self):
