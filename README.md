@@ -36,9 +36,7 @@ pip install pillow netmiko pyinstaller ttkthemes
 ### Linux/macOS
 ```bash
 pyinstaller \
---onefile \
---windowed \
---name "NetmikoGUI" \
+--name "Netmiko_gui_" \
 --icon="icon.ico" \
 --add-data "server_app.py:." \
 --hidden-import="tkinter" \
