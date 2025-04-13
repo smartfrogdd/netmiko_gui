@@ -35,7 +35,7 @@ pyinstaller --noconsole --name "Netmiko_gui_" --icon="icon.ico" --add-data "serv
 ### Linux/macOS
 ```bash
 pyinstaller \
---noconsole
+--noconsole \
 --name "Netmiko_gui_" \
 --icon="icon.ico" \
 --add-data "server_app.py:." \
