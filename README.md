@@ -24,7 +24,7 @@ sudo dnf install python3-tkinter # Fedora
 sudo pacman -S tk                # Arch
 
 # Python包
-pip install pillow netmiko pyinstaller ttkthemes pyftpdlib tftpy
+pip install  netmiko pyinstaller ttkthemes pyftpdlib tftpy
 ```
 
 ## 🚀 打包命令
