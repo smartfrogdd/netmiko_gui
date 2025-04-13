@@ -8,7 +8,6 @@ from netmiko import SSHDetect, ConnectHandler
 import concurrent.futures
 import threading
 from datetime import datetime
-import sys
 import tkinter.scrolledtext as scrolledtext
 import queue   
 from paramiko.ssh_exception import SSHException
@@ -16,7 +15,6 @@ from ttkthemes import ThemedStyle
 import logging
 from tkinter import messagebox
 import time
-from PIL import Image, ImageTk
 import subprocess
 from netmiko.ssh_dispatcher import CLASS_MAPPER
 from server_app import ServerApp
