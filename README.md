@@ -13,7 +13,7 @@ source venv/bin/activate  # Linux/macOS
 
 ### Windows
 ```batch
-pip install netmiko ttkthemes  pyinstaller pyftpdlib tftpy
+pip install netmiko ttkthemes  pyinstaller pyftpdlib tftpy ttkbootstrap
 ```
 
 ### Linux
@@ -24,7 +24,7 @@ sudo dnf install python3-tkinter # Fedora
 sudo pacman -S tk                # Arch
 
 # Python包
-pip install  netmiko pyinstaller ttkthemes pyftpdlib tftpy
+pip install  netmiko pyinstaller ttkthemes pyftpdlib tftpy ttkbootstrap
 ```
 
 ## 🚀 打包命令
