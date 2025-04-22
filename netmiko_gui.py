@@ -113,7 +113,7 @@ class Netmiko工具:
         def on_entry_click(event):
             if self.用户视图命令文本.get("1.0", "end-1c") == default_text:
                 self.用户视图命令文本.delete("1.0", tk.END)
-                self.用户视图命令文本.config(fg="black")  # 修改文本颜色为黑色
+                
 
         # 绑定焦点事件
         self.用户视图命令文本.bind("<FocusIn>", on_entry_click)
@@ -122,7 +122,7 @@ class Netmiko工具:
         def on_focus_out(event):
             if not self.用户视图命令文本.get("1.0", "end-1c"):
                 self.用户视图命令文本.insert(tk.END, default_text)
-                self.用户视图命令文本.config(fg="grey")  # 修改文本颜色为灰色
+                
 
         # 绑定焦点离开事件
         self.用户视图命令文本.bind("<FocusOut>", on_focus_out)
@@ -152,14 +152,14 @@ class Netmiko工具:
         def on_entry_click_config_mode(event):
             if self.配置视图命令文本.get("1.0", "end-1c") == default_text_config_mode:
                 self.配置视图命令文本.delete("1.0", tk.END)
-                self.配置视图命令文本.config(fg="black")  # 修改文本颜色为黑色
+                
 
         self.配置视图命令文本.bind("<FocusIn>", on_entry_click_config_mode)
 
         def on_focus_out_config_mode(event):
             if not self.配置视图命令文本.get("1.0", "end-1c"):
                 self.配置视图命令文本.insert(tk.END, default_text_config_mode)
-                self.配置视图命令文本.config(fg="grey")  # 修改文本颜色为灰色
+                
 
         self.配置视图命令文本.bind("<FocusOut>", on_focus_out_config_mode)
         # 运行用户视图命令按钮
@@ -607,7 +607,7 @@ ip,username,password,device_type,secret
     def set_encoding(self):
         global encoding
         encoding = self.编码下拉框.get()  # 获取下拉框的内容
-        self.label_result.config(text=f"当前编码: {encoding}")
+        
     
     # 确认用户输入的超时时间的函数
     def confirm_timeout(self):
@@ -1129,7 +1129,7 @@ ip,username,password,device_type,secret
             return 设备信息, 输出结果
 
         except Exception as e:
-            error_msg = f"错误{str(e)}"
+            error_msg = f"错误:{str(e)}"
             if result_queue is not None:
                 result_queue.put((设备信息, error_msg))
             return 设备信息, error_msg
@@ -1178,20 +1178,64 @@ ip,username,password,device_type,secret
     def 显示运行结果(self, 设备, 结果):
         if 设备['ip'] not in self.设备标签页字典:
             if len(self.设备标签页字典) >= self.max_tab_count:
-               
                 return  # 不创建新标签页
- 
-            # 添加新标签页
+
             标签页 = ttk.Frame(self.notebook_results)
             self.notebook_results.add(标签页, text=f"{设备['ip']} 日志")
-            self.设备标签页字典[设备['ip']] = {'text_widget': scrolledtext.ScrolledText(标签页, wrap=tk.WORD, bg="black", fg="lightgreen")}
-            
-            self.设备标签页字典[设备['ip']]['text_widget'].pack(expand=True, fill="both")
 
+            text_widget = scrolledtext.ScrolledText(标签页, wrap=tk.WORD, bg="black", fg="lightgreen")
+            text_widget.pack(expand=True, fill="both")
 
-        self.设备标签页字典[设备['ip']]['text_widget'].insert(tk.END, f"设备：{设备['ip']}\n")
-        self.设备标签页字典[设备['ip']]['text_widget'].insert(tk.END, 结果 + "\n\n")
+            # 定义标签颜色样式
+            text_widget.tag_configure("error", foreground="red")
+            text_widget.tag_configure("info", foreground="deepskyblue")
+            text_widget.tag_configure("success", foreground="lightgreen")
+            text_widget.tag_configure("warn", foreground="orange")
+            text_widget.tag_configure("cmd", foreground="gold")
 
+            self.设备标签页字典[设备['ip']] = {'text_widget': text_widget}
+
+        text_widget = self.设备标签页字典[设备['ip']]['text_widget']
+        text_widget.insert(tk.END, f"设备：{设备['ip']}\n")
+
+        start_index = text_widget.index(tk.END)
+        text_widget.insert(tk.END, 结果 + "\n\n")
+        end_index = text_widget.index(tk.END)
+
+        # 定义关键词及其对应的标签
+        keywords = {
+            "error": "error",
+            "ERROR": "error",
+            "错误": "error",
+            "失败": "error",
+
+            "info": "info",
+            "INFO": "info",
+            "日志": "info",
+
+            "成功": "success",
+            "success": "success",
+
+            "warn": "warn",
+            "warning": "warn",
+            "down": "warn",
+            "停止": "warn",
+
+            "up": "success",
+            "开始": "success",
+
+            "#": "cmd",  # 设备命令提示符
+        }
+
+        for keyword, tag in keywords.items():
+            start = start_index
+            while True:
+                pos = text_widget.search(keyword, start, stopindex=end_index, nocase=False)
+                if not pos:
+                    break
+                last = f"{pos}+{len(keyword)}c"
+                text_widget.tag_add(tag, pos, last)
+                start = last
 
 def update_progress(进度条提示框, progress, bar, label):
     # 更新进度条和百分比文本
@@ -1200,7 +1244,6 @@ def update_progress(进度条提示框, progress, bar, label):
     进度条提示框.update_idletasks()
 
 
-     
 if __name__ == "__main__":
 
     # 创建主窗口并启动
