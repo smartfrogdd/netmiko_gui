@@ -65,7 +65,7 @@ class Netmiko工具:
         ttk.Label(
             self.frame_cmd,
             text="填写用户视图命令：",
-            style="Uniform.TLabel"  
+            style="Vertical.TLabel"  
         ).grid(row=0, column=0, sticky="nw", padx=5, pady=5)  
         # Text 输入框，紧贴 Label，确保只在垂直方向扩展
         self.用户视图命令文本 = scrolledtext.ScrolledText(self.frame_cmd, height=4, width=50, wrap=tk.WORD)
@@ -105,7 +105,7 @@ class Netmiko工具:
         ttk.Label(
             self.frame_cmd,
             text="填写配置/系统视图命令：",
-            style="Uniform.TLabel"  # 应用统一标签样式
+            style="Vertical.TLabel"  # 应用统一标签样式
         ).grid(row=2, column=0, pady=5, sticky=tk.W)  # 保持原有布局参数
         # 创建配置视图命令文本框
         # 设置文本框
@@ -143,7 +143,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="运行用户视图命令",
             command=self.运行用户视图命令,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=4, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
 
         # 运行配置视图命令按钮
@@ -151,7 +151,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="运行配置视图命令",
             command=self.运行配置视图命令,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=4, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
 
         # 清空执行结果按钮
@@ -159,7 +159,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="清空执行结果",
             command=self.清空执行结果,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=4, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
 
         # 打开日志目录按钮
@@ -167,7 +167,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="打开日志目录",
             command=self.打开日志目录,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=5, column=1, padx=5, pady=5, sticky=tk.W+tk.E)
 
 # 创建 notebook 用于显示运行结果
@@ -184,7 +184,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="开启Debug日志",
             command=self.toggle_debug_logging,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         )
         self.debug_button.grid(row=5, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
 
@@ -203,7 +203,7 @@ class Netmiko工具:
             self.frame_cmd,
             text="清空Debug日志",
             command=self.clear_debug_log_text,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         )
         self.clear_button.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W+tk.E)
 
@@ -285,21 +285,21 @@ ip,username,password,device_type,secret
         ttk.Label(
             self.frame_config,
             text="选择配置文件 (CSV格式)：",
-            style="Uniform.TLabel"  # 使用统一的标签样式
+            style="Vertical.TLabel"  # 使用统一的标签样式
         ).grid(row=1, column=0, pady=10, sticky="e")  # 添加sticky="w"保持左对齐
 
         ttk.Button(
             self.frame_config,
             text="导入配置文件",
             command=self.导入配置文件,
-            style="Uniform.TButton",
+            style="Vertical.TButton",
             width=20
         ).grid(row=1, column=1, pady=10)
         self.btn_generate_template = ttk.Button(
             self.frame_config,
             text="创建配置模板",
             command=self.打开配置模板目录,
-            style="Uniform.TButton",
+            style="Vertical.TButton",
             width=20  # 保持与其他按钮相同的宽度
         )
         self.btn_generate_template.grid(row=2, column=1, pady=10)
@@ -341,7 +341,7 @@ ip,username,password,device_type,secret
             self.frame_test, 
             text="测试连接", 
             command=self.测试连接,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).pack(pady=10)
 
         # 创建显示连接测试结果的文本框
@@ -358,18 +358,18 @@ ip,username,password,device_type,secret
 
         # 创建统一样式
         style = ThemedStyle(self.frame_debug)
-        style.configure("Uniform.TLabel", font=("Arial", 10))
-        style.configure("Uniform.TEntry", font=("Arial", 10, "italic"), foreground="grey")
-        style.configure("Uniform.TButton", font=("Arial", 10))
+        style.configure("Vertical.TLabel", font=("Noto Sans", 10))
+        style.configure("Vertical.TEntry", font=("Noto Sans", 10, "italic"), foreground="grey")
+        style.configure("Vertical.TButton", font=("Noto Sans", 10))
 
         pad_opts = {"padx": 5, "pady": 5, "sticky": tk.W}
 
         # ---------- 全局超时设置 ----------
-        ttk.Label(self.frame_debug, text="全局超时（秒）:", style="Uniform.TLabel").grid(row=0, column=0, **pad_opts)
+        ttk.Label(self.frame_debug, text="全局超时（秒）：", style="Vertical.TLabel").grid(row=0, column=0, **pad_opts)
 
         
         timeout_options = ["5", "10", "15", "20", "30", "60"]
-        self.timeout_combobox = ttk.Combobox(self.frame_debug, values=timeout_options, state="readonly", style="Uniform.TEntry")
+        self.timeout_combobox = ttk.Combobox(self.frame_debug, values=timeout_options, state="readonly", style="Vertical.TEntry")
         self.timeout_combobox.current(1)  # 默认选中 "10"
         self.timeout_combobox.grid(row=0, column=1, **pad_opts)
 
@@ -377,15 +377,15 @@ ip,username,password,device_type,secret
             self.frame_debug,
             text="确认",
             command=self.confirm_timeout,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=0, column=2, **pad_opts)
 
         self.global_timeout = 10.0  # 默认全局连接超时
 
         # ---------- 编码选择 ----------
-        ttk.Label(self.frame_debug, text="选择编码：", style="Uniform.TLabel").grid(row=1, column=0, **pad_opts)
+        ttk.Label(self.frame_debug, text="选择编码：", style="Vertical.TLabel").grid(row=1, column=0, **pad_opts)
 
-        self.编码下拉框 = ttk.Combobox(self.frame_debug, values=["utf-8", "gbk", "gb2312", "big5", "ascii"], state="readonly", style="Uniform.TEntry")
+        self.编码下拉框 = ttk.Combobox(self.frame_debug, values=["utf-8", "gbk", "gb2312", "big5", "ascii"], state="readonly", style="Vertical.TEntry")
         self.编码下拉框.current(0)
         self.编码下拉框.grid(row=1, column=1, **pad_opts)
 
@@ -393,11 +393,11 @@ ip,username,password,device_type,secret
             self.frame_debug,
             text="确认",
             command=self.set_encoding,
-            style="Uniform.TButton"
+            style="Vertical.TButton"
         ).grid(row=1, column=2, **pad_opts)
 
         # ---------- 当前编码显示 ----------
-        self.label_result = ttk.Label(self.frame_debug, text="当前编码： utf-8", style="Uniform.TLabel")
+        self.label_result = ttk.Label(self.frame_debug, text="当前编码： utf-8", style="Vertical.TLabel")
         self.label_result.grid(row=2, column=0, columnspan=3, **pad_opts)
 
 
@@ -446,7 +446,7 @@ ip,username,password,device_type,secret
         button_style = ttk.Style()
         button_style.configure("Vertical.TButton", 
             padding=10,
-            font=("Segoe UI", 10, "bold"),
+            
             width=25,
             anchor="center",
             relief="raised"
