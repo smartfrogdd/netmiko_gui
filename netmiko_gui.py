@@ -1192,6 +1192,7 @@ ip,username,password,device_type,secret
             text_widget.tag_configure("success", foreground="lightgreen")
             text_widget.tag_configure("warn", foreground="orange")
             text_widget.tag_configure("cmd", foreground="gold")
+            text_widget.tag_configure("number", foreground="magenta")
 
             self.设备标签页字典[设备['ip']] = {'text_widget': text_widget}
 
@@ -1208,6 +1209,18 @@ ip,username,password,device_type,secret
             "ERROR": "error",
             "错误": "error",
             "失败": "error",
+            "^": "error",
+
+            "1":"number",
+            "2":"number",
+            "3":"number",
+            "4":"number",
+            "5":"number",
+            "6":"number",
+            "7":"number",
+            "8":"number",
+            "9":"number",
+            "0":"number",
 
             "info": "info",
             "INFO": "info",
