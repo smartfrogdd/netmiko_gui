@@ -13,7 +13,7 @@ source venv/bin/activate  # Linux/macOS
 
 ### Windows
 ```batch
-pip install netmiko ttkthemes  pyinstaller pyftpdlib tftpy
+pip install netmiko ttkthemes  pyinstaller pyftpdlib tftpy ttkbootstrap
 ```
 
 ### Linux
