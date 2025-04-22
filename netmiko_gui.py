@@ -2,16 +2,15 @@ import concurrent.futures
 import os
 import csv
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, ttk
+import ttkbootstrap as ttk
+from tkinter import filedialog, scrolledtext
 from ttkthemes import ThemedStyle
 from netmiko import SSHDetect, ConnectHandler
 import concurrent.futures
 import threading
 from datetime import datetime
-import tkinter.scrolledtext as scrolledtext
 import queue   
 from paramiko.ssh_exception import SSHException
-from ttkthemes import ThemedStyle
 import logging
 from tkinter import messagebox
 import time
@@ -22,7 +21,8 @@ encoding="utf-8"
 class Netmiko工具:
 
     def __init__(self, 主窗口):
-       
+            # 添加工具路径
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         self.主窗口 = 主窗口
         self.主窗口.title("AutoNetPy")
         self.主窗口.resizable(True, True)
@@ -35,11 +35,35 @@ class Netmiko工具:
         
         # 使用 ThemedStyle 设置主题
         self.style = ThemedStyle(self.主窗口)
-        self.style.set_theme("arc")
-        default_font = ('Consolas',10)
-    
-        # 添加日志路径
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.style = ttk.Style()
+        theme_file_path = os.path.join(script_dir, "themes.conf")
+        if not os.path.exists(theme_file_path):
+            with open(theme_file_path, "w", encoding="utf-8") as themes_file:
+                themes_file.write("flatly")
+        with open(theme_file_path, "r", encoding="utf-8") as f:
+            themes_conf = f.read()
+        self.style.theme_use(themes_conf)
+        themes = [
+                    "flatly", "litera", "minty", "lumen", "sandstone", "yeti", "pulse", "united", 
+                    "darkly", "superhero", "solar", "cyborg", "vapor"
+                 ]
+
+        # 创建统一样式
+        style = ThemedStyle()
+        style.configure("Vertical.TLabel", font=("Noto Sans", 10))
+        style.configure("Vertical.TEntry", font=("Noto Sans", 10, "italic"), foreground="grey")
+        style.configure("Vertical.TButton", font=("Noto Sans", 10))
+
+
+        # 按钮交互效果
+        style.map("Vertical.TButton",
+            foreground=[('pressed', 'lightblue'), ('active', 'lightblue')],
+            background=[('pressed', '#2c3e50'), ('active', '#3498db')],
+            relief=[('pressed', 'sunken'), ('!pressed', 'raised')]
+        )
+            
+
+        
         # 设置日志目录在脚本所在目录下
         self.log_folder = os.path.join(script_dir, "日志")
         self.检查日志()
@@ -48,7 +72,7 @@ class Netmiko工具:
 
         # 创建主页面
         self.frame_cmd = ttk.Frame(self.notebook)
-        self.notebook.add(self.frame_cmd, text="输入命令")
+        self.notebook.add(self.frame_cmd, text="任务执行")
 
         # 设置网格布局
         self.frame_cmd.grid_columnconfigure(0, weight=1)
@@ -330,7 +354,7 @@ ip,username,password,device_type,secret
 
 
 
-        # ---------------------新增测试页------------------------------
+        # ---------------------测试页------------------------------
          # 初始化设备列表
         self.设备列表 = []
         self.frame_test = ttk.Frame(self.notebook)
@@ -352,15 +376,11 @@ ip,username,password,device_type,secret
 
 
 
-        # ---------------------新增调试页------------------------------
+        # ---------------------调试页------------------------------
         self.frame_debug = ttk.Frame(self.notebook)
         self.notebook.add(self.frame_debug, text="调试页面")
 
-        # 创建统一样式
-        style = ThemedStyle(self.frame_debug)
-        style.configure("Vertical.TLabel", font=("Noto Sans", 10))
-        style.configure("Vertical.TEntry", font=("Noto Sans", 10, "italic"), foreground="grey")
-        style.configure("Vertical.TButton", font=("Noto Sans", 10))
+
 
         pad_opts = {"padx": 5, "pady": 5, "sticky": tk.W}
 
@@ -396,15 +416,21 @@ ip,username,password,device_type,secret
             style="Vertical.TButton"
         ).grid(row=1, column=2, **pad_opts)
 
-        # ---------- 当前编码显示 ----------
-        self.label_result = ttk.Label(self.frame_debug, text="当前编码： utf-8", style="Vertical.TLabel")
-        self.label_result.grid(row=2, column=0, columnspan=3, **pad_opts)
 
+        # ---------- 选择主题 ----------
+        theme_combobox = ttk.Combobox(self.frame_debug, values=themes, width=15)
+        self.label_theme = ttk.Label(self.frame_debug, text="选择主题：", style="Vertical.TLabel")
+        self.label_theme.grid(row=3, column=0, columnspan=3, **pad_opts)
+        theme_combobox.set("flatly")  # 设置默认选择的主题
+        theme_combobox.grid(row=3, column=1, columnspan=3, **pad_opts)
+        def change_theme(event):
+            selected_theme = theme_combobox.get()  # 获取选中的主题
+            self.style.theme_use(selected_theme)  # 切换到选中的主题
+            with open(theme_file_path, "w", encoding="utf-8") as themes_file:
+                themes_file.write(theme_combobox.get())            
+        theme_combobox.bind("<<ComboboxSelected>>", change_theme)
 
-
-
-
-
+        
     #-----------------------工具页面------------------------------------------
 
         
@@ -442,22 +468,6 @@ ip,username,password,device_type,secret
         self.frame_info.rowconfigure(1, weight=1)  # 使中间行可扩展
         self.frame_info.columnconfigure(0, weight=1)
 
-        # 统一按钮样式
-        button_style = ttk.Style()
-        button_style.configure("Vertical.TButton", 
-            padding=10,
-            
-            width=25,
-            anchor="center",
-            relief="raised"
-        )
-
-        # 按钮交互效果
-        button_style.map("Vertical.TButton",
-            foreground=[('pressed', 'lightblue'), ('active', 'lightblue')],
-            background=[('pressed', '#2c3e50'), ('active', '#3498db')],
-            relief=[('pressed', 'sunken'), ('!pressed', 'raised')]
-        )
 
         # 按钮容器 - 垂直排列
         btn_container = ttk.Frame(button_frame)
@@ -486,6 +496,7 @@ ip,username,password,device_type,secret
 
 
         self.notebook.select(1)  # 默认选中第二个标签页
+
 
 
     def open_server_app(self):
@@ -616,7 +627,7 @@ ip,username,password,device_type,secret
                 return
 
         except ValueError:
-            messagebox.showerror("错误", "请输入有效的数字作为超时时间。")
+            messagebox.showerror("ERROR", "请输入有效的数字作为超时时间。")
 
   
     def clear_debug_log_text(self):
@@ -923,7 +934,7 @@ ip,username,password,device_type,secret
                 time.sleep(0.03)
         
         except Exception as e:
-            messagebox.showerror("错误", f"执行过程中发生错误: {str(e)}")
+            messagebox.showerror("[ERROR]", f"执行过程中发生错误: {str(e)}")
         finally:
             进度条提示框.destroy()
             messagebox.showinfo("任务完成", f"任务执行完毕，共完成 {completed}/{total_devices} 个设备，详细日志请查看{self.log_folder}")
@@ -1038,8 +1049,8 @@ ip,username,password,device_type,secret
         # 详细日志输出
         log_msg = (
             f"[{timestamp}]\n[线程ID: {thread_id}]\n[线程名: {thread_name}]\n"
-            f"▶ 开始执行任务: {设备信息['ip']}\n"
-            f"▶ 当前编码：{encoding}\n"
+            f"[INFO] 开始执行任务: {设备信息['ip']}\n"
+            f"[INFO] 当前编码：{encoding}\n"
             "----------------------------------------\n"
         )
         print(log_msg)
@@ -1059,7 +1070,8 @@ ip,username,password,device_type,secret
 
             # 连接设备
             连接 = ConnectHandler(**设备信息, conn_timeout=self.global_timeout, global_delay_factor=2,encoding=encoding)
-            
+            prompt = 连接.find_prompt()
+            输出结果 += f"[INFO] 连接成功，当前提示符：{prompt}\n"
             # 处理用户视图命令
             if 用户视图命令:
                 # 输出结果 += f"用户视图命令：\n----------------------------------------\n{用户视图命令}\n----------------------------------------\n"
@@ -1072,7 +1084,7 @@ ip,username,password,device_type,secret
                 
                 end_time = time.time()
                 total_time = end_time - start_time
-                输出结果 += f"\n----------------------------------------\n▶{设备信息['ip']}：任务执行完成,耗时:" + str(total_time)
+                输出结果 += f"\n----------------------------------------\n[INFO]{设备信息['ip']}：任务执行完成,耗时:" + str(total_time)
 
             # 处理配置视图命令
             if 配置视图命令:
@@ -1092,7 +1104,7 @@ ip,username,password,device_type,secret
                 
                 end_time = time.time()
                 total_time = end_time - start_time
-                输出结果 += f"\n----------------------------------------\n▶{设备信息['ip']}：任务执行完成,已自动对远端设备进行保存操作,耗时:" + str(total_time)
+                输出结果 += f"\n----------------------------------------\n[INFO]{设备信息['ip']}：任务执行完成,已自动对远端设备进行保存操作,耗时:" + str(total_time)
 
             # 日志记录
             current_date = datetime.now().strftime("%Y%m%d_%H")
@@ -1117,7 +1129,7 @@ ip,username,password,device_type,secret
             return 设备信息, 输出结果
 
         except Exception as e:
-            error_msg = f"错误：{str(e)}"
+            error_msg = f"错误{str(e)}"
             if result_queue is not None:
                 result_queue.put((设备信息, error_msg))
             return 设备信息, error_msg
@@ -1136,7 +1148,7 @@ ip,username,password,device_type,secret
             # 读取回显判断是否成功
             output = 连接.read_channel()
             if "Password has not been set" in output:
-                输出结果 += "设备没有设置super密码，请检查配置文件是否错误\n"
+                输出结果 += "[INFO] 设备没有设置super密码，请检查配置文件是否错误\n"
             elif "Permission denied" in output:
                 输出结果 += "super密码错误，提权失败\n"
             else:
